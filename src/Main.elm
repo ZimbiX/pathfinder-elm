@@ -4,6 +4,8 @@ import Browser
 import Html exposing (Html, a, button, div, img, text)
 import Html.Attributes exposing (href, src)
 import Html.Events exposing (onClick)
+import Keyboard exposing (Key(..), RawKey)
+import Keyboard.Arrows
 import Svg exposing (image, rect, svg)
 import Svg.Attributes exposing (height, rx, ry, style, viewBox, width, x, xlinkHref, y)
 
@@ -13,10 +15,11 @@ import Svg.Attributes exposing (height, rx, ry, style, viewBox, width, x, xlinkH
 
 
 main =
-    Browser.sandbox
+    Browser.element
         { init = init
         , update = update
         , view = view
+        , subscriptions = subscriptions
         }
 
 
@@ -42,11 +45,13 @@ gridSize =
     }
 
 
-init : Model
-init =
-    { column = 0
-    , row = 0
-    }
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( { column = 0
+      , row = 0
+      }
+    , Cmd.none
+    )
 
 
 
@@ -54,15 +59,68 @@ init =
 
 
 type Msg
+    = Move MoveDirection
+    | KeyDown RawKey
+
+
+type MoveDirection
     = MoveRight
     | MoveLeft
     | MoveUp
     | MoveDown
+    | NoMove
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    (case msg of
+    let
+        moveDirection =
+            case msg of
+                Move md ->
+                    md
+
+                KeyDown rawKey ->
+                    moveDirectionFromKeyDown rawKey
+    in
+    ( movePlayer moveDirection model |> validMove model
+    , Cmd.none
+    )
+
+
+moveDirectionFromKeyDown : RawKey -> MoveDirection
+moveDirectionFromKeyDown rawKey =
+    case Keyboard.anyKeyUpper rawKey of
+        Just ArrowRight ->
+            MoveRight
+
+        Just ArrowLeft ->
+            MoveLeft
+
+        Just ArrowUp ->
+            MoveUp
+
+        Just ArrowDown ->
+            MoveDown
+
+        Just (Character "D") ->
+            MoveRight
+
+        Just (Character "A") ->
+            MoveLeft
+
+        Just (Character "W") ->
+            MoveUp
+
+        Just (Character "S") ->
+            MoveDown
+
+        _ ->
+            NoMove
+
+
+movePlayer : MoveDirection -> Model -> Model
+movePlayer moveDirection model =
+    case moveDirection of
         MoveRight ->
             { model | column = model.column + 1 }
 
@@ -74,8 +132,9 @@ update msg model =
 
         MoveDown ->
             { model | row = model.row + 1 }
-    )
-        |> validMove model
+
+        NoMove ->
+            model
 
 
 validMove : Model -> Model -> Model
@@ -97,6 +156,17 @@ validMove modelOrig modelNew =
 
 
 
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.batch
+        [ Keyboard.downs KeyDown
+        ]
+
+
+
 -- VIEW
 
 
@@ -115,10 +185,10 @@ view model =
                 []
             ]
         , div []
-            [ button [ onClick MoveRight ] [ text ">" ]
-            , button [ onClick MoveLeft ] [ text "<" ]
-            , button [ onClick MoveUp ] [ text "^" ]
-            , button [ onClick MoveDown ] [ text "v" ]
+            [ button [ onClick (Move MoveRight) ] [ text ">" ]
+            , button [ onClick (Move MoveLeft) ] [ text "<" ]
+            , button [ onClick (Move MoveUp) ] [ text "^" ]
+            , button [ onClick (Move MoveDown) ] [ text "v" ]
             ]
         , div []
             [ a [ href "https://github.com/ZimbiX/pathfinder-elm" ] [ text "GitHub" ]
