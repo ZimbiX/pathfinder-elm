@@ -53,11 +53,17 @@ init =
 
 type Msg
     = MoveRight
+    | MoveDown
 
 
 update : Msg -> Model -> Model
 update msg model =
-    { model | x = model.x + 32 }
+    case msg of
+        MoveRight ->
+            { model | x = model.x + 32 }
+
+        MoveDown ->
+            { model | y = model.y + 32 }
 
 
 
@@ -69,10 +75,19 @@ view model =
     div []
         [ svg [ width "128", height "128", viewBox "0 0 128 128" ]
             [ image [ xlinkHref "/assets/images/icon128.png", width "128", height "128" ] []
-            , rect [ x (String.fromFloat model.x), y "28", width "10", height "10", rx "20", ry "20" ] []
+            , rect
+                [ x (model.x |> String.fromFloat)
+                , y (model.y |> String.fromFloat)
+                , width "10"
+                , height "10"
+                , rx "20"
+                , ry "20"
+                ]
+                []
             ]
         , div []
             [ button [ onClick MoveRight ] [ text ">" ]
+            , button [ onClick MoveDown ] [ text "v" ]
             ]
         , div []
             [ a [ href "https://github.com/ZimbiX/pathfinder-elm" ] [ text "GitHub" ]
