@@ -4,8 +4,8 @@ import Browser
 import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (src)
 import Html.Events exposing (onClick)
-import Svg exposing (image, svg)
-import Svg.Attributes exposing (height, viewBox, width, xlinkHref)
+import Svg exposing (image, rect, svg)
+import Svg.Attributes exposing (height, rx, ry, style, viewBox, width, x, xlinkHref, y)
 
 
 
@@ -25,12 +25,14 @@ main =
 
 
 type alias Model =
-    String
+    { x : Float, y : Float }
 
 
 init : Model
 init =
-    "yo"
+    { x = 28
+    , y = 28
+    }
 
 
 
@@ -38,12 +40,12 @@ init =
 
 
 type Msg
-    = PostMessage
+    = MoveRight
 
 
 update : Msg -> Model -> Model
 update msg model =
-    model ++ " sup"
+    { model | x = model.x + 32 }
 
 
 
@@ -55,10 +57,9 @@ view model =
     div []
         [ svg [ width "128", height "128", viewBox "0 0 128 128" ]
             [ image [ xlinkHref "/icon128.png", width "128", height "128" ] []
+            , rect [ x (String.fromFloat model.x), y "28", width "10", height "10", rx "20", ry "20" ] []
             ]
         , div []
-            [ img [ src "/icon128.png" ] []
+            [ button [ onClick MoveRight ] [ text ">" ]
             ]
-        , text model
-        , button [ onClick PostMessage ] [ text "Reply" ]
         ]
