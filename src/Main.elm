@@ -56,7 +56,7 @@ view : Model -> Html Msg
 view model =
     div []
         [ svg [ width "128", height "128", viewBox "0 0 128 128" ]
-            [ image [ xlinkHref "/icon128.png", width "128", height "128" ] []
+            [ image [ xlinkHref "/images/icon128.png", width "128", height "128" ] []
             , rect [ x (String.fromFloat model.x), y "28", width "10", height "10", rx "20", ry "20" ] []
             ]
         , div []

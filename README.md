@@ -1,5 +1,23 @@
 # PathFinder Elm
 
+<!-- MarkdownTOC autolink=true -->
+
+- [Play](#play)
+- [Elm](#elm)
+- [History](#history)
+- [Development](#development)
+    - [Dependencies](#dependencies)
+    - [Run](#run)
+    - [Build](#build)
+
+<!-- /MarkdownTOC -->
+
+## Play
+
+This app hardly does anything yet, but you can check it out at:
+
+https://pathfinder-elm.netlify.com/
+
 ## Elm
 
 I'm using this an opportunity to learn Functional Programming! :D Elm seems like a good choice, and I'm finding the [Elm Guide](https://guide.elm-lang.org/) very approachable.
@@ -16,3 +34,29 @@ Versions:
 - GameMaker Studio (Android spike)
 - Pascal using SwinGame - for a uni project
 - This one!
+
+## Development
+
+### Dependencies
+
+To install development dependencies (only supports Arch Linux, currently):
+
+```bash
+$ ./scripts/setup
+```
+
+### Run
+
+To run the app with live reload on code changes:
+
+```bash
+$ ./scripts/start
+```
+
+### Build
+
+To build the app to the `dist` folder:
+
+```bash
+$ ./scripts/build
+```

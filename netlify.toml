@@ -1,0 +1,3 @@
+[build]
+  command = "./scripts/build"
+  publish = "dist"

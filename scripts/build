@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -Eeuo pipefail
+
+cd "$(dirname "$0")/.."
+
+command -v elm >/dev/null || npm install -g elm
+
+rm -rf dist
+cp -r assets dist
+elm make src/Main.elm --output=dist/index.html
