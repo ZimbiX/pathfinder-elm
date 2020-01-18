@@ -2,10 +2,10 @@ module Main exposing (Model, Msg(..), init, main, update, view)
 
 import Browser
 import Html exposing (Html, button, div, img, text)
-import Html.Attributes exposing (href, src)
+import Html.Attributes exposing (src)
 import Html.Events exposing (onClick)
 import Svg exposing (image, svg)
-import Svg.Attributes exposing (height, viewBox, width)
+import Svg.Attributes exposing (height, viewBox, width, xlinkHref)
 
 
 
@@ -53,10 +53,10 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ --[ svg [ width "120", height "120", viewBox "0 0 120 120" ]
-          --    [ image [ href "/icon128.png" ] []
-          --    ]
-          div []
+        [ svg [ width "128", height "128", viewBox "0 0 128 128" ]
+            [ image [ xlinkHref "/icon128.png", width "128", height "128" ] []
+            ]
+        , div []
             [ img [ src "/icon128.png" ] []
             ]
         , text model
