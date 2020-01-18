@@ -35,7 +35,9 @@ gridBorder =
 
 
 gridSize =
-    { cellWidth = 32
+    { rowCount = 3
+    , columnCount = 3
+    , cellWidth = 32
     , cellHeight = 32
     }
 
@@ -60,7 +62,7 @@ type Msg
 
 update : Msg -> Model -> Model
 update msg model =
-    case msg of
+    (case msg of
         MoveRight ->
             { model | column = model.column + 1 }
 
@@ -72,6 +74,26 @@ update msg model =
 
         MoveDown ->
             { model | row = model.row + 1 }
+    )
+        |> validMove model
+
+
+validMove : Model -> Model -> Model
+validMove modelOrig modelNew =
+    if
+        modelNew.row
+            >= 0
+            && modelNew.column
+            >= 0
+            && modelNew.row
+            < gridSize.rowCount
+            && modelNew.column
+            < gridSize.columnCount
+    then
+        modelNew
+
+    else
+        modelOrig
 
 
 
