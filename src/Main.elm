@@ -25,7 +25,7 @@ main =
 
 
 type alias Model =
-    { x : Float, y : Float }
+    { column : Float, row : Float }
 
 
 gridBorder =
@@ -42,8 +42,8 @@ gridSize =
 
 init : Model
 init =
-    { x = gridBorder.left + gridSize.cellWidth / 2
-    , y = gridBorder.top + gridSize.cellHeight / 2
+    { column = 0
+    , row = 0
     }
 
 
@@ -62,16 +62,16 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         MoveRight ->
-            { model | x = model.x + gridSize.cellWidth }
+            { model | column = model.column + 1 }
 
         MoveLeft ->
-            { model | x = model.x - gridSize.cellWidth }
+            { model | column = model.column - 1 }
 
         MoveUp ->
-            { model | y = model.y - gridSize.cellHeight }
+            { model | row = model.row - 1 }
 
         MoveDown ->
-            { model | y = model.y + gridSize.cellHeight }
+            { model | row = model.row + 1 }
 
 
 
@@ -87,8 +87,8 @@ view model =
                 [ xlinkHref "/assets/images/man.png"
                 , width "11"
                 , height "31"
-                , x (model.x - (11 / 2) |> round |> String.fromInt)
-                , y (model.y - (31 / 2) + 1 |> round |> String.fromInt)
+                , x ((model.column |> xFromColumn) - (11 / 2) |> round |> String.fromInt)
+                , y ((model.row |> yFromRow) - 31 / 2 + 1 |> round |> String.fromInt)
                 ]
                 []
             ]
@@ -102,3 +102,13 @@ view model =
             [ a [ href "https://github.com/ZimbiX/pathfinder-elm" ] [ text "GitHub" ]
             ]
         ]
+
+
+xFromColumn : Float -> Float
+xFromColumn column =
+    gridBorder.left + gridSize.cellWidth * (0.5 + column)
+
+
+yFromRow : Float -> Float
+yFromRow row =
+    gridBorder.top + gridSize.cellHeight * (0.5 + row)
