@@ -29,8 +29,8 @@ type alias Model =
 
 
 gridBorder =
-    { top = 12
-    , left = 12
+    { top = 16
+    , left = 16
     }
 
 
@@ -83,13 +83,12 @@ view model =
     div []
         [ svg [ width "128", height "128", viewBox "0 0 128 128" ]
             [ image [ xlinkHref "/assets/images/icon128.png", width "128", height "128" ] []
-            , rect
-                [ x (model.x |> String.fromFloat)
-                , y (model.y |> String.fromFloat)
-                , width "10"
-                , height "10"
-                , rx "20"
-                , ry "20"
+            , image
+                [ xlinkHref "/assets/images/man.png"
+                , width "11"
+                , height "31"
+                , x (model.x - (11 / 2) |> round |> String.fromInt)
+                , y (model.y - (31 / 2) + 1 |> round |> String.fromInt)
                 ]
                 []
             ]
