@@ -53,6 +53,8 @@ init =
 
 type Msg
     = MoveRight
+    | MoveLeft
+    | MoveUp
     | MoveDown
 
 
@@ -60,10 +62,16 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         MoveRight ->
-            { model | x = model.x + 32 }
+            { model | x = model.x + gridSize.cellWidth }
+
+        MoveLeft ->
+            { model | x = model.x - gridSize.cellWidth }
+
+        MoveUp ->
+            { model | y = model.y - gridSize.cellHeight }
 
         MoveDown ->
-            { model | y = model.y + 32 }
+            { model | y = model.y + gridSize.cellHeight }
 
 
 
@@ -87,6 +95,8 @@ view model =
             ]
         , div []
             [ button [ onClick MoveRight ] [ text ">" ]
+            , button [ onClick MoveLeft ] [ text "<" ]
+            , button [ onClick MoveUp ] [ text "^" ]
             , button [ onClick MoveDown ] [ text "v" ]
             ]
         , div []
