@@ -28,10 +28,22 @@ type alias Model =
     { x : Float, y : Float }
 
 
+gridBorder =
+    { top = 12
+    , left = 12
+    }
+
+
+gridSize =
+    { cellWidth = 32
+    , cellHeight = 32
+    }
+
+
 init : Model
 init =
-    { x = 28
-    , y = 28
+    { x = gridBorder.left + gridSize.cellWidth / 2
+    , y = gridBorder.top + gridSize.cellHeight / 2
     }
 
 
