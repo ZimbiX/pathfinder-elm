@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -Eeuo pipefail
+
+yaourt -S elm-platform-bin
+npm install -g elm-live
+command -v elm-live || echo "npm package binaries were installed, but are not in your PATH" && exit 1
