@@ -233,10 +233,6 @@ yFromRow row =
     gridBorder.top + gridSize.cellHeight * (0.5 + row)
 
 
-
---viewWall : Wall -> Svg.Svg
-
-
 viewPlayer model =
     image
         [ xlinkHref "/assets/images/man.png"
