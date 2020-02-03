@@ -1,6 +1,8 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
+import Animation exposing (..)
 import Browser
+import Browser.Events exposing (onAnimationFrameDelta)
 import Html exposing (Html, a, button, div, img, text)
 import Html.Attributes exposing (href, src)
 import Html.Events exposing (onClick)
@@ -30,6 +32,8 @@ main =
 type alias Model =
     { column : Float
     , row : Float
+    , move : MoveDirection
+    , clock : Float
     , walls : List Wall
     }
 
@@ -64,6 +68,8 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     ( { column = 0
       , row = 0
+      , move = NoMove
+      , clock = 0
       , walls =
             [ { column = 0, row = 0, orientation = Horizontal }
             , { column = 1, row = 0, orientation = Horizontal }
@@ -96,7 +102,8 @@ init _ =
 
 
 type Msg
-    = Move MoveDirection
+    = Tick Float
+    | Move MoveDirection
     | KeyDown RawKey
 
 
@@ -110,18 +117,36 @@ type MoveDirection
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        moveDirection =
-            case msg of
-                Move md ->
-                    md
+    case msg of
+        KeyDown rawKey ->
+            ( { model | move = moveDirectionFromKeyDown rawKey }, Cmd.none )
 
-                KeyDown rawKey ->
-                    moveDirectionFromKeyDown rawKey
-    in
-    ( movePlayer moveDirection model |> validMove model
-    , Cmd.none
-    )
+        Tick deltaTime ->
+            let
+                clock =
+                    model.clock + deltaTime
+
+                column =
+                    model.column + 0.001 * deltaTime
+            in
+            ( { model | clock = clock, column = column }, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )
+
+
+
+--let
+--    moveDirection =
+--        case msg of
+--            Move md ->
+--                md
+--            KeyDown rawKey ->
+--                moveDirectionFromKeyDown rawKey
+--in
+--( movePlayer moveDirection model |> validMove model
+--, Cmd.none
+--)
 
 
 moveDirectionFromKeyDown : RawKey -> MoveDirection
@@ -200,10 +225,24 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Keyboard.downs KeyDown
+        , onAnimationFrameDelta Tick
         ]
 
 
 
+-- ANIMATION
+
+
+myAnim : Animation
+myAnim =
+    animation 0
+        |> from 0
+        |> to 1
+        |> duration 4
+
+
+
+--animate
 -- VIEW
 
 
