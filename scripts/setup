@@ -2,6 +2,9 @@
 
 set -Eeuo pipefail
 
-yaourt -S elm-platform-bin
+# Need to manually import GPG keys for developer of elm-format
+curl -s https://keybase.io/avh4/pgp_keys.asc | gpg --import
+
+yaourt -S elm-platform-bin elm-format-bin
 npm install -g elm-live
 command -v elm-live || echo "npm package binaries were installed, but are not in your PATH" && exit 1
