@@ -2,9 +2,16 @@
 
 set -Eeuo pipefail
 
-# Need to manually import GPG keys for developer of elm-format
-curl -s https://keybase.io/avh4/pgp_keys.asc | gpg --import
+command -v elm-format || {
+  # Need to manually import GPG keys for developer of elm-format
+  curl -s https://keybase.io/avh4/pgp_keys.asc | gpg --import
 
-yaourt -S elm-platform-bin elm-format-bin
-npm install -g elm-live
+  yaourt -S elm-format-bin
+}
+
+command -v elm || yaourt -S elm-platform-bin
+
+command -v npm || yarn global add npm || yaourt -S npm
+
+command -v elm-live || npm install -g elm-live
 command -v elm-live || echo "npm package binaries were installed, but are not in your PATH" && exit 1
