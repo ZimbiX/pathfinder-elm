@@ -1,15 +1,14 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
-import Animation exposing (..)
+import Animation exposing (Animation, animation, duration, from, to)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
-import Html exposing (Html, a, button, div, img, text)
-import Html.Attributes exposing (href, src)
-import Html.Events exposing (onClick)
+import Css exposing (absolute, height, left, position, px, top, width)
+import Html.Styled exposing (Html, a, button, div, img, text, toUnstyled)
+import Html.Styled.Attributes exposing (css, href, src)
+import Html.Styled.Events exposing (onClick)
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
-import Svg exposing (image, rect, svg)
-import Svg.Attributes exposing (height, rx, ry, style, viewBox, width, x, xlinkHref, y)
 
 
 
@@ -20,7 +19,7 @@ main =
     Browser.element
         { init = init
         , update = update
-        , view = view
+        , view = view >> toUnstyled
         , subscriptions = subscriptions
         }
 
@@ -249,9 +248,14 @@ myAnim =
 view : Model -> Html Msg
 view model =
     div []
-        [ svg [ width "640", height "480", viewBox "0 0 640 480" ]
+        [ div
+            [ css
+                [ width (px 640)
+                , height (px 480)
+                ]
+            ]
             (List.concat
-                [ [ image [ xlinkHref "/assets/images/bg_level.png", width "640", height "480" ] []
+                [ [ img [ src "/assets/images/bg_level.png", css [ width (px 640), height (px 480) ] ] []
                   , viewPlayer model
                   ]
                 , model.walls |> List.map viewWall
@@ -273,34 +277,43 @@ yFromRow row =
 
 
 viewPlayer model =
-    image
-        [ xlinkHref "/assets/images/man.png"
-        , width "11"
-        , height "31"
-        , x ((model.column |> xFromColumn) - (11 / 2) |> round |> String.fromInt)
-        , y ((model.row |> yFromRow) - 31 / 2 + 1 |> round |> String.fromInt)
+    img
+        [ src "/assets/images/man.png"
+        , css
+            [ position absolute
+            , width (px 11)
+            , height (px 31)
+            , left (px ((model.column |> xFromColumn) - (11 / 2) |> round |> toFloat))
+            , top (px ((model.row |> yFromRow) - 31 / 2 + 1 |> round |> toFloat))
+            ]
         ]
         []
 
 
 viewWall wall =
     if wall.orientation == Vertical then
-        image
-            [ xlinkHref "/assets/images/wall_v.png"
-            , width "16"
-            , height "32"
-            , x ((wall.column |> xFromColumn) - 24 |> round |> String.fromInt)
-            , y ((wall.row |> yFromRow) - 15 |> round |> String.fromInt)
+        img
+            [ src "/assets/images/wall_v.png"
+            , css
+                [ position absolute
+                , width (px 16)
+                , height (px 32)
+                , left (px ((wall.column |> xFromColumn) - 24 |> round |> toFloat))
+                , top (px ((wall.row |> yFromRow) - 15 |> round |> toFloat))
+                ]
             ]
             []
 
     else
-        image
-            [ xlinkHref "/assets/images/wall_h.png"
-            , width "32"
-            , height "16"
-            , x ((wall.column |> xFromColumn) - 16 |> round |> String.fromInt)
-            , y ((wall.row |> yFromRow) - 24 |> round |> String.fromInt)
+        img
+            [ src "/assets/images/wall_h.png"
+            , css
+                [ position absolute
+                , width (px 32)
+                , height (px 16)
+                , left (px ((wall.column |> xFromColumn) - 16 |> round |> toFloat))
+                , top (px ((wall.row |> yFromRow) - 24 |> round |> toFloat))
+                ]
             ]
             []
 
