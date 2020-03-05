@@ -276,6 +276,10 @@ yFromRow row =
     gridBorder.top + gridSize.cellHeight * (0.5 + row)
 
 
+roundFloat =
+    round >> toFloat
+
+
 viewPlayer model =
     img
         [ src "/assets/images/man.png"
@@ -283,8 +287,8 @@ viewPlayer model =
             [ position absolute
             , width (px 11)
             , height (px 31)
-            , left (px ((model.column |> xFromColumn) - (11 / 2) |> round |> toFloat))
-            , top (px ((model.row |> yFromRow) - 31 / 2 + 1 |> round |> toFloat))
+            , left (px ((model.column |> xFromColumn) - (11 / 2) |> roundFloat))
+            , top (px ((model.row |> yFromRow) - 31 / 2 + 1 |> roundFloat))
             ]
         ]
         []
@@ -296,10 +300,10 @@ viewWall wall =
             [ src "/assets/images/wall_v.png"
             , css
                 [ position absolute
-                , width (px 16)
+                , width (px 8)
                 , height (px 32)
-                , left (px ((wall.column |> xFromColumn) - 24 |> round |> toFloat))
-                , top (px ((wall.row |> yFromRow) - 15 |> round |> toFloat))
+                , left (px ((wall.column |> xFromColumn) - 20 |> roundFloat))
+                , top (px ((wall.row |> yFromRow) - 15 |> roundFloat))
                 ]
             ]
             []
@@ -310,9 +314,9 @@ viewWall wall =
             , css
                 [ position absolute
                 , width (px 32)
-                , height (px 16)
-                , left (px ((wall.column |> xFromColumn) - 16 |> round |> toFloat))
-                , top (px ((wall.row |> yFromRow) - 24 |> round |> toFloat))
+                , height (px 8)
+                , left (px ((wall.column |> xFromColumn) - 16 |> roundFloat))
+                , top (px ((wall.row |> yFromRow) - 20 |> roundFloat))
                 ]
             ]
             []
