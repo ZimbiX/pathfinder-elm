@@ -341,7 +341,7 @@ view model =
                 , model.walls |> List.map viewWall
                 ]
             )
-        , viewArrowButtons model
+        , viewArrowButtons
         , viewGithubLink
         ]
 
@@ -402,7 +402,7 @@ viewWall wall =
             []
 
 
-viewArrowButtons model =
+viewArrowButtons =
     div []
         [ div []
             [ viewArrowButton MoveLeft "<"
