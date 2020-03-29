@@ -117,8 +117,20 @@ type MoveDirection
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        Move moveDirection ->
+            ( movePlayer moveDirection model |> validMove model
+            , Cmd.none
+            )
+
         KeyDown rawKey ->
-            ( { model | move = moveDirectionFromKeyDown rawKey }, Cmd.none )
+            --( { model | move = moveDirectionFromKeyDown rawKey }, Cmd.none )
+            let
+                moveDirection =
+                    moveDirectionFromKeyDown rawKey
+            in
+            ( movePlayer moveDirection model |> validMove model
+            , Cmd.none
+            )
 
         Tick deltaTime ->
             let
@@ -129,23 +141,6 @@ update msg model =
                     model.column + 0.001 * deltaTime
             in
             ( { model | clock = clock, column = column }, Cmd.none )
-
-        _ ->
-            ( model, Cmd.none )
-
-
-
---let
---    moveDirection =
---        case msg of
---            Move md ->
---                md
---            KeyDown rawKey ->
---                moveDirectionFromKeyDown rawKey
---in
---( movePlayer moveDirection model |> validMove model
---, Cmd.none
---)
 
 
 moveDirectionFromKeyDown : RawKey -> MoveDirection
