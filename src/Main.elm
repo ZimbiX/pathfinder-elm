@@ -21,6 +21,8 @@ main =
         , update = update
         , view = view >> toUnstyled
         , subscriptions = subscriptions
+
+        --, subscriptions = \_ -> Sub.none
         }
 
 
@@ -121,19 +123,10 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Move moveDirection ->
-            ( movePlayer moveDirection model |> validMove model
-            , Cmd.none
-            )
+            updateMove moveDirection model
 
         KeyDown rawKey ->
-            --( { model | move = moveDirectionFromKeyDown rawKey }, Cmd.none )
-            let
-                moveDirection =
-                    moveDirectionFromKeyDown rawKey
-            in
-            ( movePlayer moveDirection model |> validMove model
-            , Cmd.none
-            )
+            updateMove (moveDirectionFromKeyDown rawKey) model
 
         Tick deltaTime ->
             let
@@ -151,6 +144,13 @@ update msg model =
 
         ToggleAnimation ->
             ( { model | animationEnabled = not model.animationEnabled }, Cmd.none )
+
+
+updateMove : MoveDirection -> Model -> ( Model, Cmd Msg )
+updateMove moveDirection model =
+    ( movePlayer moveDirection model |> validMove model
+    , Cmd.none
+    )
 
 
 moveDirectionFromKeyDown : RawKey -> MoveDirection
