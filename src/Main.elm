@@ -1,10 +1,13 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
+--import Browser.Document
+
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
 import Css exposing (absolute, fontSize, height, left, position, px, top, width)
 import Debug
-import Html.Styled exposing (Html, a, button, div, img, text, toUnstyled)
+import Html exposing (Html)
+import Html.Styled exposing (a, button, div, img, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, href, src)
 import Html.Styled.Events exposing (onClick)
 import Keyboard exposing (Key(..), RawKey)
@@ -16,10 +19,10 @@ import Keyboard.Arrows
 
 
 main =
-    Browser.element
+    Browser.document
         { init = init
         , update = update
-        , view = view >> toUnstyled
+        , view = view
         , subscriptions = subscriptions
 
         --, subscriptions = \_ -> Sub.none
@@ -325,25 +328,18 @@ subscriptions model =
 -- VIEW
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
-    div []
-        [ div
-            [ css
-                [ width (px 640)
-                , height (px 480)
-                ]
+    { title = "PathFinder"
+    , body =
+        [ div []
+            [ viewBoard model
+            , viewArrowButtons
+            , viewGithubLink
             ]
-            (List.concat
-                [ [ img [ src "/assets/images/bg_level.png", css [ width (px 640), height (px 480) ] ] []
-                  , viewPlayer model
-                  ]
-                , model.walls |> List.map viewWall
-                ]
-            )
-        , viewArrowButtons
-        , viewGithubLink
+            |> toUnstyled
         ]
+    }
 
 
 xFromColumn : Float -> Float
@@ -360,6 +356,21 @@ roundFloat =
     round >> toFloat
 
 
+viewBoard model =
+    div [ css [ width (px 640), height (px 480) ] ]
+        (List.concat
+            [ [ viewBackground
+              , viewPlayer model
+              ]
+            , viewWalls model
+            ]
+        )
+
+
+viewBackground =
+    img [ src "/assets/images/bg_level.png", css [ width (px 640), height (px 480) ] ] []
+
+
 viewPlayer model =
     img
         [ src "/assets/images/man.png"
@@ -372,6 +383,10 @@ viewPlayer model =
             ]
         ]
         []
+
+
+viewWalls model =
+    model.walls |> List.map viewWall
 
 
 viewWall wall =
