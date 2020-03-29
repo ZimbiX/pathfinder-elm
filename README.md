@@ -9,6 +9,7 @@
     - [Dependencies](#dependencies)
     - [Run](#run)
     - [Build](#build)
+    - [Todo](#todo)
 
 <!-- /MarkdownTOC -->
 
@@ -60,3 +61,9 @@ To build the app to the `dist` folder:
 ```bash
 $ ./scripts/build
 ```
+
+### Todo
+
+- Wall collision and returning to origin
+- Revealing hidden wall on collision
+- Placing walls by free-form line drawing
