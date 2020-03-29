@@ -33,11 +33,22 @@ main =
 type alias Model =
     { column : Float
     , row : Float
-    , move : MoveDirection
+    , currentMove : CurrentMove
     , clock : Float
     , walls : List Wall
     , animationEnabled : Bool
     }
+
+
+type alias CurrentMove =
+    Maybe
+        { origin : Position
+        , target : Position
+        }
+
+
+type alias Position =
+    { column : Float, row : Float }
 
 
 type alias Wall =
@@ -70,7 +81,7 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     ( { column = 0
       , row = 0
-      , move = NoMove
+      , currentMove = Nothing
       , clock = 0
       , walls =
             [ { column = 0, row = 0, orientation = Horizontal }
@@ -123,34 +134,73 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Move moveDirection ->
-            updateMove moveDirection model
+            tryStartPlayerMove moveDirection model
 
         KeyDown rawKey ->
-            updateMove (moveDirectionFromKeyDown rawKey) model
+            tryStartPlayerMove (moveDirectionFromKeyDown rawKey) model
 
         Tick deltaTime ->
-            let
-                clock =
-                    model.clock + deltaTime
-
-                column =
-                    if model.animationEnabled then
-                        model.column + 0.001 * deltaTime
-
-                    else
-                        model.column
-            in
-            ( { model | clock = clock, column = column }, Cmd.none )
+            ( updatePlayerPosition deltaTime model |> finishPlayerMove, Cmd.none )
 
         ToggleAnimation ->
             ( { model | animationEnabled = not model.animationEnabled }, Cmd.none )
 
 
-updateMove : MoveDirection -> Model -> ( Model, Cmd Msg )
-updateMove moveDirection model =
-    ( movePlayer moveDirection model |> validMove model
+updatePlayerPosition : Float -> Model -> Model
+updatePlayerPosition deltaTime model =
+    let
+        clock =
+            model.clock + deltaTime
+
+        moveSpeed =
+            0.001
+
+        moveDistance =
+            moveSpeed * deltaTime
+
+        column =
+            case model.currentMove of
+                Just currentMove ->
+                    if model.column < currentMove.target.column then
+                        model.column + moveDistance
+
+                    else
+                        model.column
+
+                Nothing ->
+                    model.column
+    in
+    { model | clock = clock, column = column }
+
+
+tryStartPlayerMove : MoveDirection -> Model -> ( Model, Cmd Msg )
+tryStartPlayerMove moveDirection model =
+    ( startPlayerMove moveDirection model |> validMove model
     , Cmd.none
     )
+
+
+finishPlayerMove : Model -> Model
+finishPlayerMove model =
+    case model.currentMove of
+        Just currentMove ->
+            if
+                currentMove.origin.column
+                    <= model.column
+                    && model.column
+                    <= currentMove.target.column
+                    && currentMove.origin.row
+                    <= model.row
+                    && model.row
+                    <= currentMove.target.row
+            then
+                model
+
+            else
+                { model | column = currentMove.target.column, row = currentMove.target.row, currentMove = Nothing }
+
+        Nothing ->
+            model
 
 
 moveDirectionFromKeyDown : RawKey -> MoveDirection
@@ -184,22 +234,28 @@ moveDirectionFromKeyDown rawKey =
             NoMove
 
 
-movePlayer : MoveDirection -> Model -> Model
-movePlayer moveDirection model =
+startPlayerMove : MoveDirection -> Model -> Model
+startPlayerMove moveDirection model =
+    let
+        origin =
+            { column = model.column, row = model.row }
+    in
     case moveDirection of
+        --MoveRight ->
+        --    { model | column = model.column + 1 }
+        --MoveLeft ->
+        --    { model | column = model.column - 1 }
+        --MoveUp ->
+        --    { model | row = model.row - 1 }
+        --MoveDown ->
+        --    { model | row = model.row + 1 }
         MoveRight ->
-            { model | column = model.column + 1 }
-
-        MoveLeft ->
-            { model | column = model.column - 1 }
-
-        MoveUp ->
-            { model | row = model.row - 1 }
-
-        MoveDown ->
-            { model | row = model.row + 1 }
+            { model | currentMove = Just { origin = origin, target = { origin | column = origin.column + 1 } } }
 
         NoMove ->
+            model
+
+        _ ->
             model
 
 
