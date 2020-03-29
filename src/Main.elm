@@ -405,13 +405,25 @@ viewWall wall =
 viewArrowButtons model =
     div []
         [ div []
-            [ button [ css [ width (px 50), height (px 50), fontSize (px 30) ], onClick (Move MoveLeft) ] [ text "<" ]
-            , button [ css [ width (px 50), height (px 50), fontSize (px 30) ], onClick (Move MoveRight) ] [ text ">" ]
-            , button [ css [ width (px 50), height (px 50), fontSize (px 30) ], onClick (Move MoveUp) ] [ text "^" ]
-            , button [ css [ width (px 50), height (px 50), fontSize (px 30) ], onClick (Move MoveDown) ] [ text "v" ]
+            [ viewArrowButton MoveLeft "<"
+            , viewArrowButton MoveRight ">"
+            , viewArrowButton MoveUp "^"
+            , viewArrowButton MoveDown "v"
             ]
         , div [] [ text "or use arrow keys" ]
         ]
+
+
+viewArrowButton moveDirection buttonText =
+    button
+        [ css
+            [ width (px 50)
+            , height (px 50)
+            , fontSize (px 30)
+            ]
+        , onClick (Move moveDirection)
+        ]
+        [ text buttonText ]
 
 
 viewGithubLink =
