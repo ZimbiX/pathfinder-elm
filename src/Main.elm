@@ -1,6 +1,5 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
-import Animation exposing (Animation, animation, duration, from, to)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
 import Css exposing (absolute, fontSize, height, left, position, px, top, width)
@@ -323,19 +322,6 @@ subscriptions model =
 
 
 
--- ANIMATION
-
-
-myAnim : Animation
-myAnim =
-    animation 0
-        |> from 0
-        |> to 1
-        |> duration 4
-
-
-
---animate
 -- VIEW
 
 
