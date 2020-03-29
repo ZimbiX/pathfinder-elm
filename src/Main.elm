@@ -4,6 +4,7 @@ import Animation exposing (Animation, animation, duration, from, to)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
 import Css exposing (absolute, height, left, position, px, top, width)
+import Debug
 import Html.Styled exposing (Html, a, button, div, img, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, href, src)
 import Html.Styled.Events exposing (onClick)
@@ -44,6 +45,7 @@ type alias CurrentMove =
     Maybe
         { origin : Position
         , target : Position
+        , direction : MoveDirection
         }
 
 
@@ -151,26 +153,42 @@ updatePlayerPosition deltaTime model =
     let
         clock =
             model.clock + deltaTime
-
-        moveSpeed =
-            0.001
-
-        moveDistance =
-            moveSpeed * deltaTime
-
-        column =
-            case model.currentMove of
-                Just currentMove ->
-                    if model.column < currentMove.target.column then
-                        model.column + moveDistance
-
-                    else
-                        model.column
-
-                Nothing ->
-                    model.column
     in
-    { model | clock = clock, column = column }
+    case model.currentMove of
+        Just currentMove ->
+            let
+                moveSpeed =
+                    0.007
+
+                moveDistance =
+                    moveSpeed * deltaTime
+
+                column =
+                    case currentMove.direction of
+                        MoveRight ->
+                            model.column + moveDistance
+
+                        MoveLeft ->
+                            model.column - moveDistance
+
+                        _ ->
+                            model.column
+
+                row =
+                    case currentMove.direction of
+                        MoveDown ->
+                            model.row + moveDistance
+
+                        MoveUp ->
+                            model.row - moveDistance
+
+                        _ ->
+                            model.row
+            in
+            { model | clock = clock, column = column, row = row }
+
+        Nothing ->
+            { model | clock = clock }
 
 
 tryStartPlayerMove : MoveDirection -> Model -> Model
@@ -180,23 +198,14 @@ tryStartPlayerMove moveDirection model =
             model
 
         Nothing ->
-            startPlayerMove moveDirection model |> validMove model
+            startPlayerMove moveDirection model
 
 
 finishPlayerMove : Model -> Model
 finishPlayerMove model =
     case model.currentMove of
         Just currentMove ->
-            if
-                currentMove.origin.column
-                    <= model.column
-                    && model.column
-                    <= currentMove.target.column
-                    && currentMove.origin.row
-                    <= model.row
-                    && model.row
-                    <= currentMove.target.row
-            then
+            if playerWithinMoveBounds model currentMove then
                 model
 
             else
@@ -204,6 +213,30 @@ finishPlayerMove model =
 
         Nothing ->
             model
+
+
+playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position, target : Position } -> Bool
+playerWithinMoveBounds model currentMove =
+    let
+        columnWithinMoveBounds =
+            numberBetween currentMove.origin.column currentMove.target.column model.column
+
+        rowWithinMoveBounds =
+            numberBetween currentMove.origin.row currentMove.target.row model.row
+    in
+    columnWithinMoveBounds && rowWithinMoveBounds
+
+
+numberBetween : Float -> Float -> Float -> Bool
+numberBetween a b num =
+    a
+        <= num
+        && num
+        <= b
+        || b
+        <= num
+        && num
+        <= a
 
 
 moveDirectionFromKeyDown : RawKey -> MoveDirection
@@ -244,21 +277,19 @@ startPlayerMove moveDirection model =
             { column = model.column, row = model.row }
     in
     case moveDirection of
-        --MoveRight ->
-        --    { model | column = model.column + 1 }
-        --MoveLeft ->
-        --    { model | column = model.column - 1 }
-        --MoveUp ->
-        --    { model | row = model.row - 1 }
-        --MoveDown ->
-        --    { model | row = model.row + 1 }
         MoveRight ->
-            { model | currentMove = Just { origin = origin, target = { origin | column = origin.column + 1 } } }
+            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | column = origin.column + 1 } } }
+
+        MoveLeft ->
+            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | column = origin.column - 1 } } }
+
+        MoveUp ->
+            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | row = origin.row - 1 } } }
+
+        MoveDown ->
+            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | row = origin.row + 1 } } }
 
         NoMove ->
-            model
-
-        _ ->
             model
 
 
