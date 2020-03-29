@@ -34,6 +34,7 @@ type alias Model =
     , move : MoveDirection
     , clock : Float
     , walls : List Wall
+    , animationEnabled : Bool
     }
 
 
@@ -91,6 +92,7 @@ init _ =
             , { column = 5, row = 3, orientation = Vertical }
             , { column = 5, row = 4, orientation = Vertical }
             ]
+      , animationEnabled = False
       }
     , Cmd.none
     )
@@ -104,6 +106,7 @@ type Msg
     = Tick Float
     | Move MoveDirection
     | KeyDown RawKey
+    | ToggleAnimation
 
 
 type MoveDirection
@@ -138,9 +141,16 @@ update msg model =
                     model.clock + deltaTime
 
                 column =
-                    model.column + 0.001 * deltaTime
+                    if model.animationEnabled then
+                        model.column + 0.001 * deltaTime
+
+                    else
+                        model.column
             in
             ( { model | clock = clock, column = column }, Cmd.none )
+
+        ToggleAnimation ->
+            ( { model | animationEnabled = not model.animationEnabled }, Cmd.none )
 
 
 moveDirectionFromKeyDown : RawKey -> MoveDirection
@@ -256,7 +266,7 @@ view model =
                 , model.walls |> List.map viewWall
                 ]
             )
-        , viewArrowButtons
+        , viewArrowButtons model
         , viewGithubLink
         ]
 
@@ -317,7 +327,7 @@ viewWall wall =
             []
 
 
-viewArrowButtons =
+viewArrowButtons model =
     div []
         [ div []
             [ button [ onClick (Move MoveRight) ] [ text ">" ]
@@ -326,7 +336,24 @@ viewArrowButtons =
             , button [ onClick (Move MoveDown) ] [ text "v" ]
             ]
         , div [] [ text "or use arrow keys" ]
+        , viewToggleAnimationButton model
         ]
+
+
+viewToggleAnimationButton model =
+    div []
+        [ button [ onClick ToggleAnimation ]
+            [ text (enableOrDisableTextFromBool model.animationEnabled ++ " animation")
+            ]
+        ]
+
+
+enableOrDisableTextFromBool flag =
+    if flag then
+        "Disable"
+
+    else
+        "Enable"
 
 
 viewGithubLink =
