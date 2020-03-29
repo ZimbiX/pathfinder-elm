@@ -192,7 +192,7 @@ tryStartPlayerMove moveDirection model =
             model
 
         Nothing ->
-            startPlayerMove moveDirection model
+            startPlayerMove moveDirection model |> validMove
 
 
 finishPlayerMove : Model -> Model
@@ -287,22 +287,27 @@ startPlayerMove moveDirection model =
             model
 
 
-validMove : Model -> Model -> Model
-validMove modelOrig modelNew =
-    if
-        modelNew.row
-            >= 0
-            && modelNew.column
-            >= 0
-            && modelNew.row
-            < gridSize.rowCount
-            && modelNew.column
-            < gridSize.columnCount
-    then
-        modelNew
+validMove : Model -> Model
+validMove model =
+    case model.currentMove of
+        Just currentMove ->
+            if
+                currentMove.target.row
+                    >= 0
+                    && currentMove.target.column
+                    >= 0
+                    && currentMove.target.row
+                    < gridSize.rowCount
+                    && currentMove.target.column
+                    < gridSize.columnCount
+            then
+                model
 
-    else
-        modelOrig
+            else
+                { model | currentMove = Nothing }
+
+        Nothing ->
+            model
 
 
 
