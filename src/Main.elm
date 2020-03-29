@@ -134,10 +134,10 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Move moveDirection ->
-            tryStartPlayerMove moveDirection model
+            ( tryStartPlayerMove moveDirection model, Cmd.none )
 
         KeyDown rawKey ->
-            tryStartPlayerMove (moveDirectionFromKeyDown rawKey) model
+            ( tryStartPlayerMove (moveDirectionFromKeyDown rawKey) model, Cmd.none )
 
         Tick deltaTime ->
             ( updatePlayerPosition deltaTime model |> finishPlayerMove, Cmd.none )
@@ -173,11 +173,14 @@ updatePlayerPosition deltaTime model =
     { model | clock = clock, column = column }
 
 
-tryStartPlayerMove : MoveDirection -> Model -> ( Model, Cmd Msg )
+tryStartPlayerMove : MoveDirection -> Model -> Model
 tryStartPlayerMove moveDirection model =
-    ( startPlayerMove moveDirection model |> validMove model
-    , Cmd.none
-    )
+    case model.currentMove of
+        Just _ ->
+            model
+
+        Nothing ->
+            startPlayerMove moveDirection model |> validMove model
 
 
 finishPlayerMove : Model -> Model
