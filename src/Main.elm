@@ -37,7 +37,6 @@ type alias Model =
     , currentMove : CurrentMove
     , clock : Float
     , walls : List Wall
-    , animationEnabled : Bool
     }
 
 
@@ -107,7 +106,6 @@ init _ =
             , { column = 5, row = 3, orientation = Vertical }
             , { column = 5, row = 4, orientation = Vertical }
             ]
-      , animationEnabled = False
       }
     , Cmd.none
     )
@@ -121,7 +119,6 @@ type Msg
     = Tick Float
     | Move MoveDirection
     | KeyDown RawKey
-    | ToggleAnimation
 
 
 type MoveDirection
@@ -143,9 +140,6 @@ update msg model =
 
         Tick deltaTime ->
             ( updatePlayerPosition deltaTime model |> finishPlayerMove, Cmd.none )
-
-        ToggleAnimation ->
-            ( { model | animationEnabled = not model.animationEnabled }, Cmd.none )
 
 
 updatePlayerPosition : Float -> Model -> Model
@@ -426,15 +420,6 @@ viewArrowButtons model =
             , button [ css [ width (px 50), height (px 50), fontSize (px 30) ], onClick (Move MoveDown) ] [ text "v" ]
             ]
         , div [] [ text "or use arrow keys" ]
-        , viewToggleAnimationButton model
-        ]
-
-
-viewToggleAnimationButton model =
-    div []
-        [ button [ onClick ToggleAnimation ]
-            [ text (enableOrDisableTextFromBool model.animationEnabled ++ " animation")
-            ]
         ]
 
 
