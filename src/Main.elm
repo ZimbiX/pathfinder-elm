@@ -414,13 +414,5 @@ viewArrowButtons model =
         ]
 
 
-enableOrDisableTextFromBool flag =
-    if flag then
-        "Disable"
-
-    else
-        "Enable"
-
-
 viewGithubLink =
     div [] [ a [ href "https://github.com/ZimbiX/pathfinder-elm" ] [ text "GitHub" ] ]
