@@ -3,7 +3,7 @@ module Main exposing (Model, Msg(..), init, main, update, view)
 import Animation exposing (Animation, animation, duration, from, to)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
-import Css exposing (absolute, height, left, position, px, top, width)
+import Css exposing (absolute, fontSize, height, left, position, px, top, width)
 import Debug
 import Html.Styled exposing (Html, a, button, div, img, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, href, src)
@@ -420,10 +420,10 @@ viewWall wall =
 viewArrowButtons model =
     div []
         [ div []
-            [ button [ onClick (Move MoveRight) ] [ text ">" ]
-            , button [ onClick (Move MoveLeft) ] [ text "<" ]
-            , button [ onClick (Move MoveUp) ] [ text "^" ]
-            , button [ onClick (Move MoveDown) ] [ text "v" ]
+            [ button [ css [ width (px 50), height (px 50), fontSize (px 30) ], onClick (Move MoveLeft) ] [ text "<" ]
+            , button [ css [ width (px 50), height (px 50), fontSize (px 30) ], onClick (Move MoveRight) ] [ text ">" ]
+            , button [ css [ width (px 50), height (px 50), fontSize (px 30) ], onClick (Move MoveUp) ] [ text "^" ]
+            , button [ css [ width (px 50), height (px 50), fontSize (px 30) ], onClick (Move MoveDown) ] [ text "v" ]
             ]
         , div [] [ text "or use arrow keys" ]
         , viewToggleAnimationButton model
