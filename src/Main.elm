@@ -2,7 +2,7 @@ module Main exposing (Model, Msg(..), init, main, update, view)
 
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
-import Css exposing (absolute, fontSize, height, left, position, px, top, width)
+import Css exposing (absolute, fontSize, height, left, opacity, position, px, top, width)
 import Debug
 import Html exposing (Html)
 import Html.Styled exposing (a, button, div, img, text, toUnstyled)
@@ -60,6 +60,8 @@ type alias Wall =
     { column : Float
     , row : Float
     , orientation : Orientation
+    , hidden : Bool
+    , opacity : Float
     }
 
 
@@ -89,26 +91,26 @@ init _ =
       , currentMove = Nothing
       , clock = 0
       , walls =
-            [ { column = 0, row = -0.5, orientation = Horizontal }
-            , { column = 1, row = -0.5, orientation = Horizontal }
-            , { column = 2, row = -0.5, orientation = Horizontal }
-            , { column = 3, row = -0.5, orientation = Horizontal }
-            , { column = 4, row = -0.5, orientation = Horizontal }
-            , { column = 0, row = 4.5, orientation = Horizontal }
-            , { column = 1, row = 4.5, orientation = Horizontal }
-            , { column = 2, row = 4.5, orientation = Horizontal }
-            , { column = 3, row = 4.5, orientation = Horizontal }
-            , { column = 4, row = 4.5, orientation = Horizontal }
-            , { column = -0.5, row = 0, orientation = Vertical }
-            , { column = -0.5, row = 1, orientation = Vertical }
-            , { column = -0.5, row = 2, orientation = Vertical }
-            , { column = -0.5, row = 3, orientation = Vertical }
-            , { column = -0.5, row = 4, orientation = Vertical }
-            , { column = 4.5, row = 0, orientation = Vertical }
-            , { column = 4.5, row = 1, orientation = Vertical }
-            , { column = 4.5, row = 2, orientation = Vertical }
-            , { column = 4.5, row = 3, orientation = Vertical }
-            , { column = 4.5, row = 4, orientation = Vertical }
+            [ { hidden = True, opacity = 0, column = 0, row = -0.5, orientation = Horizontal }
+            , { hidden = True, opacity = 0, column = 1, row = -0.5, orientation = Horizontal }
+            , { hidden = True, opacity = 0, column = 2, row = -0.5, orientation = Horizontal }
+            , { hidden = True, opacity = 0, column = 3, row = -0.5, orientation = Horizontal }
+            , { hidden = True, opacity = 0, column = 4, row = -0.5, orientation = Horizontal }
+            , { hidden = True, opacity = 0, column = 0, row = 4.5, orientation = Horizontal }
+            , { hidden = True, opacity = 0, column = 1, row = 4.5, orientation = Horizontal }
+            , { hidden = True, opacity = 0, column = 2, row = 4.5, orientation = Horizontal }
+            , { hidden = True, opacity = 0, column = 3, row = 4.5, orientation = Horizontal }
+            , { hidden = True, opacity = 0, column = 4, row = 4.5, orientation = Horizontal }
+            , { hidden = True, opacity = 0, column = -0.5, row = 0, orientation = Vertical }
+            , { hidden = True, opacity = 0, column = -0.5, row = 1, orientation = Vertical }
+            , { hidden = True, opacity = 0, column = -0.5, row = 2, orientation = Vertical }
+            , { hidden = True, opacity = 0, column = -0.5, row = 3, orientation = Vertical }
+            , { hidden = True, opacity = 0, column = -0.5, row = 4, orientation = Vertical }
+            , { hidden = True, opacity = 0, column = 4.5, row = 0, orientation = Vertical }
+            , { hidden = True, opacity = 0, column = 4.5, row = 1, orientation = Vertical }
+            , { hidden = True, opacity = 0, column = 4.5, row = 2, orientation = Vertical }
+            , { hidden = True, opacity = 0, column = 4.5, row = 3, orientation = Vertical }
+            , { hidden = True, opacity = 0, column = 4.5, row = 4, orientation = Vertical }
             ]
       }
     , Cmd.none
@@ -146,6 +148,7 @@ update msg model =
             ( updatePlayerPosition deltaTime model
                 |> returnToOriginIfPathUnclear
                 |> finishPlayerMove
+                |> updateWallsOpacity deltaTime
             , Cmd.none
             )
 
@@ -233,6 +236,7 @@ returnToOriginIfPathUnclear model =
 
                 else
                     { model | currentMove = Just { currentMove | reversing = True, direction = oppositeDirection currentMove.direction } }
+                        |> revealWall
 
             -- TODO: Compensate for overshooting the point of collision
             Nothing ->
@@ -281,9 +285,7 @@ wallExistsBetweenPoints : Walls -> Position -> Position -> Bool
 wallExistsBetweenPoints walls pointA pointB =
     let
         midpoint =
-            { column = (pointA.column + pointB.column) / 2
-            , row = (pointA.row + pointB.row) / 2
-            }
+            calculateMidpoint pointA pointB
 
         wall =
             walls |> List.Extra.find (wallIsAtPoint midpoint)
@@ -296,9 +298,42 @@ wallExistsBetweenPoints walls pointA pointB =
             False
 
 
+calculateMidpoint : Position -> Position -> Position
+calculateMidpoint pointA pointB =
+    { column = (pointA.column + pointB.column) / 2
+    , row = (pointA.row + pointB.row) / 2
+    }
+
+
 wallIsAtPoint : Position -> Wall -> Bool
 wallIsAtPoint point wall =
     wall.column == point.column && wall.row == point.row
+
+
+revealWall : Model -> Model
+revealWall model =
+    case model.currentMove of
+        Just currentMove ->
+            let
+                currentMoveMidpoint =
+                    calculateMidpoint currentMove.origin currentMove.target
+
+                walls =
+                    model.walls |> List.map (revealWallIfAtPoint currentMoveMidpoint)
+            in
+            { model | walls = walls }
+
+        Nothing ->
+            model
+
+
+revealWallIfAtPoint : Position -> Wall -> Wall
+revealWallIfAtPoint point wall =
+    if wall.column == point.column && wall.row == point.row then
+        { wall | hidden = False }
+
+    else
+        wall
 
 
 playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position, target : Position, reversing : Bool } -> Bool
@@ -370,6 +405,32 @@ startPlayerMove moveDirection model =
 
         NoMove ->
             model
+
+
+updateWallsOpacity : Float -> Model -> Model
+updateWallsOpacity deltaTime model =
+    { model | walls = List.map (updateWallOpacity deltaTime) model.walls }
+
+
+updateWallOpacity : Float -> Wall -> Wall
+updateWallOpacity deltaTime wall =
+    let
+        wallOpacitySpeed =
+            0.008
+
+        revealing =
+            if wall.hidden then
+                -1
+
+            else
+                1
+
+        opacity =
+            (wall.opacity + wallOpacitySpeed * deltaTime * revealing)
+                |> max 0
+                |> min 1
+    in
+    { wall | opacity = opacity }
 
 
 
@@ -459,6 +520,7 @@ viewWall wall =
                 , height (px 32)
                 , left (px ((wall.column |> xFromColumn) - 4 |> roundFloat))
                 , top (px ((wall.row |> yFromRow) - 15 |> roundFloat))
+                , opacity (Css.num wall.opacity)
                 ]
             ]
             []
@@ -472,6 +534,7 @@ viewWall wall =
                 , height (px 8)
                 , left (px ((wall.column |> xFromColumn) - 16 |> roundFloat))
                 , top (px ((wall.row |> yFromRow) - 4 |> roundFloat))
+                , opacity (Css.num wall.opacity)
                 ]
             ]
             []

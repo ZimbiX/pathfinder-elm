@@ -64,6 +64,4 @@ $ ./scripts/build
 
 ### Todo
 
-- Wall collision and returning to origin
-- Revealing hidden wall on collision
 - Placing walls by free-form line drawing
