@@ -124,7 +124,7 @@ init _ =
 
 type Msg
     = Tick Float
-    | Move MoveDirection
+    | MoveButtonPressed MoveDirection
     | KeyDown RawKey
 
 
@@ -133,17 +133,21 @@ type MoveDirection
     | MoveLeft
     | MoveUp
     | MoveDown
-    | NoMove
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Move moveDirection ->
+        MoveButtonPressed moveDirection ->
             ( tryStartPlayerMove moveDirection model, Cmd.none )
 
         KeyDown rawKey ->
-            ( tryStartPlayerMove (moveDirectionFromKeyDown rawKey) model, Cmd.none )
+            case moveDirectionFromKeyDown rawKey of
+                Just moveDirection ->
+                    ( tryStartPlayerMove moveDirection model, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         Tick deltaTime ->
             ( updatePlayerPosition deltaTime model
@@ -259,9 +263,6 @@ oppositeDirection direction =
         MoveDown ->
             MoveUp
 
-        NoMove ->
-            NoMove
-
 
 pathAheadClear : Model -> Bool
 pathAheadClear model =
@@ -354,35 +355,35 @@ numberBetween a b num =
     a <= num && num <= b || b <= num && num <= a
 
 
-moveDirectionFromKeyDown : RawKey -> MoveDirection
+moveDirectionFromKeyDown : RawKey -> Maybe MoveDirection
 moveDirectionFromKeyDown rawKey =
     case Keyboard.anyKeyUpper rawKey of
         Just ArrowRight ->
-            MoveRight
+            Just MoveRight
 
         Just ArrowLeft ->
-            MoveLeft
+            Just MoveLeft
 
         Just ArrowUp ->
-            MoveUp
+            Just MoveUp
 
         Just ArrowDown ->
-            MoveDown
+            Just MoveDown
 
         Just (Character "D") ->
-            MoveRight
+            Just MoveRight
 
         Just (Character "A") ->
-            MoveLeft
+            Just MoveLeft
 
         Just (Character "W") ->
-            MoveUp
+            Just MoveUp
 
         Just (Character "S") ->
-            MoveDown
+            Just MoveDown
 
         _ ->
-            NoMove
+            Nothing
 
 
 startPlayerMove : MoveDirection -> Model -> Model
@@ -403,9 +404,6 @@ startPlayerMove moveDirection model =
 
         MoveDown ->
             { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | row = origin.row + 1 }, reversing = False } }
-
-        NoMove ->
-            model
 
 
 updateWallsOpacity : Float -> Model -> Model
@@ -560,7 +558,7 @@ viewArrowButton moveDirection buttonText =
             , height (px 50)
             , fontSize (px 30)
             ]
-        , onClick (Move moveDirection)
+        , onClick (MoveButtonPressed moveDirection)
         ]
         [ text buttonText ]
 
