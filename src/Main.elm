@@ -14,6 +14,16 @@ import List.Extra
 
 
 
+-- SETTINGS
+
+
+settings =
+    { playerMoveSpeed = 0.007
+    , wallOpacitySpeed = 0.008
+    }
+
+
+
 -- MAIN
 
 
@@ -167,11 +177,8 @@ updatePlayerPosition deltaTime model =
     case model.currentMove of
         Just currentMove ->
             let
-                moveSpeed =
-                    0.007
-
                 moveDistance =
-                    moveSpeed * deltaTime
+                    settings.playerMoveSpeed * deltaTime
 
                 column =
                     case currentMove.direction of
@@ -414,9 +421,6 @@ updateWallsOpacity deltaTime model =
 updateWallOpacity : Float -> Wall -> Wall
 updateWallOpacity deltaTime wall =
     let
-        wallOpacitySpeed =
-            0.008
-
         revealing =
             if wall.hidden then
                 -1
@@ -425,7 +429,7 @@ updateWallOpacity deltaTime wall =
                 1
 
         opacity =
-            (wall.opacity + wallOpacitySpeed * deltaTime * revealing)
+            (wall.opacity + settings.wallOpacitySpeed * deltaTime * revealing)
                 |> max 0
                 |> min 1
     in
