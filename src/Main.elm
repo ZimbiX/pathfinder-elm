@@ -31,8 +31,7 @@ main =
 
 
 type alias Model =
-    { column : Float
-    , row : Float
+    { position : Position
     , currentMove : CurrentMove
     , clock : Float
     , walls : Walls
@@ -86,8 +85,10 @@ gridSize =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { column = 0
-      , row = 0
+    ( { position =
+            { column = 0
+            , row = 0
+            }
       , currentMove = Nothing
       , clock = 0
       , walls =
@@ -171,26 +172,26 @@ updatePlayerPosition deltaTime model =
                 column =
                     case currentMove.direction of
                         MoveRight ->
-                            model.column + moveDistance
+                            model.position.column + moveDistance
 
                         MoveLeft ->
-                            model.column - moveDistance
+                            model.position.column - moveDistance
 
                         _ ->
-                            model.column
+                            model.position.column
 
                 row =
                     case currentMove.direction of
                         MoveDown ->
-                            model.row + moveDistance
+                            model.position.row + moveDistance
 
                         MoveUp ->
-                            model.row - moveDistance
+                            model.position.row - moveDistance
 
                         _ ->
-                            model.row
+                            model.position.row
             in
-            { model | clock = clock, column = column, row = row }
+            { model | clock = clock, position = Position column row }
 
         Nothing ->
             { model | clock = clock }
@@ -214,10 +215,10 @@ finishPlayerMove model =
                 model
 
             else if currentMove.reversing then
-                { model | column = currentMove.origin.column, row = currentMove.origin.row, currentMove = Nothing }
+                { model | position = currentMove.origin, currentMove = Nothing }
 
             else
-                { model | column = currentMove.target.column, row = currentMove.target.row, currentMove = Nothing }
+                { model | position = currentMove.target, currentMove = Nothing }
 
         Nothing ->
             model
@@ -267,11 +268,11 @@ pathAheadClear model =
     case model.currentMove of
         Just currentMove ->
             if wallExistsBetweenPoints model.walls currentMove.origin currentMove.target then
-                (numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) model.column
-                    || numberBetween currentMove.origin.column (currentMove.origin.column - 0.4) model.column
+                (numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) model.position.column
+                    || numberBetween currentMove.origin.column (currentMove.origin.column - 0.4) model.position.column
                 )
-                    && (numberBetween currentMove.origin.row (currentMove.origin.row + 0.4) model.row
-                            || numberBetween currentMove.origin.row (currentMove.origin.row - 0.4) model.row
+                    && (numberBetween currentMove.origin.row (currentMove.origin.row + 0.4) model.position.row
+                            || numberBetween currentMove.origin.row (currentMove.origin.row - 0.4) model.position.row
                        )
 
             else
@@ -340,10 +341,10 @@ playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position
 playerWithinMoveBounds model currentMove =
     let
         columnWithinMoveBounds =
-            numberBetween currentMove.origin.column currentMove.target.column model.column
+            numberBetween currentMove.origin.column currentMove.target.column model.position.column
 
         rowWithinMoveBounds =
-            numberBetween currentMove.origin.row currentMove.target.row model.row
+            numberBetween currentMove.origin.row currentMove.target.row model.position.row
     in
     columnWithinMoveBounds && rowWithinMoveBounds
 
@@ -388,7 +389,7 @@ startPlayerMove : MoveDirection -> Model -> Model
 startPlayerMove moveDirection model =
     let
         origin =
-            { column = model.column, row = model.row }
+            { column = model.position.column, row = model.position.row }
     in
     case moveDirection of
         MoveRight ->
@@ -499,8 +500,8 @@ viewPlayer model =
             [ position absolute
             , width (px 11)
             , height (px 31)
-            , left (px ((model.column |> xFromColumn) - (11 / 2) |> roundFloat))
-            , top (px ((model.row |> yFromRow) - 31 / 2 + 1 |> roundFloat))
+            , left (px ((model.position.column |> xFromColumn) - (11 / 2) |> roundFloat))
+            , top (px ((model.position.row |> yFromRow) - 31 / 2 + 1 |> roundFloat))
             ]
         ]
         []
