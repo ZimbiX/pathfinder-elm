@@ -1,7 +1,5 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
---import Browser.Document
-
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
 import Css exposing (absolute, fontSize, height, left, position, px, top, width)
@@ -25,8 +23,6 @@ main =
         , update = update
         , view = view
         , subscriptions = subscriptions
-
-        --, subscriptions = \_ -> Sub.none
         }
 
 
@@ -302,8 +298,7 @@ wallExistsBetweenPoints walls pointA pointB =
 
 wallIsAtPoint : Position -> Wall -> Bool
 wallIsAtPoint point wall =
-    (wall.column == point.column)
-        && (wall.row == point.row)
+    wall.column == point.column && wall.row == point.row
 
 
 playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position, target : Position, reversing : Bool } -> Bool
@@ -320,14 +315,7 @@ playerWithinMoveBounds model currentMove =
 
 numberBetween : Float -> Float -> Float -> Bool
 numberBetween a b num =
-    a
-        <= num
-        && num
-        <= b
-        || b
-        <= num
-        && num
-        <= a
+    a <= num && num <= b || b <= num && num <= a
 
 
 moveDirectionFromKeyDown : RawKey -> MoveDirection
