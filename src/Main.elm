@@ -229,7 +229,7 @@ returnToOriginIfPathUnclear model =
             Just currentMove ->
                 { model | currentMove = Just { currentMove | reversing = True, direction = oppositeDirection currentMove.direction } }
 
-            -- TODO: Compensate for overshooting the oint of collision
+            -- TODO: Compensate for overshooting the point of collision
             Nothing ->
                 model
 
@@ -265,8 +265,12 @@ pathAheadClear model =
         Just _ ->
             case model.currentMove of
                 Just currentMove ->
-                    numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) model.column
-                        && numberBetween currentMove.origin.row (currentMove.origin.row + 0.4) model.row
+                    (numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) model.column
+                        || numberBetween currentMove.origin.column (currentMove.origin.column - 0.4) model.column
+                    )
+                        && (numberBetween currentMove.origin.row (currentMove.origin.row + 0.4) model.row
+                                || numberBetween currentMove.origin.row (currentMove.origin.row - 0.4) model.row
+                           )
 
                 Nothing ->
                     True
