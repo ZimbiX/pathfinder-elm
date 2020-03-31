@@ -199,7 +199,7 @@ tryStartPlayerMove moveDirection model =
             model
 
         Nothing ->
-            startPlayerMove moveDirection model |> validMove
+            startPlayerMove moveDirection model
 
 
 finishPlayerMove : Model -> Model
@@ -227,11 +227,30 @@ returnToOriginIfPathUnclear model =
     else
         case model.currentMove of
             Just currentMove ->
-                { model | currentMove = Just { currentMove | reversing = True, direction = MoveLeft } }
+                { model | currentMove = Just { currentMove | reversing = True, direction = oppositeDirection currentMove.direction } }
 
             -- TODO: Compensate for overshooting the oint of collision
             Nothing ->
                 model
+
+
+oppositeDirection : MoveDirection -> MoveDirection
+oppositeDirection direction =
+    case direction of
+        MoveLeft ->
+            MoveRight
+
+        MoveRight ->
+            MoveLeft
+
+        MoveUp ->
+            MoveDown
+
+        MoveDown ->
+            MoveUp
+
+        NoMove ->
+            NoMove
 
 
 pathAheadClear : Model -> Bool
@@ -246,7 +265,8 @@ pathAheadClear model =
         Just _ ->
             case model.currentMove of
                 Just currentMove ->
-                    numberBetween currentMove.origin.column (currentMove.origin.column + 0.5) model.column
+                    numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) model.column
+                        && numberBetween currentMove.origin.row (currentMove.origin.row + 0.4) model.row
 
                 Nothing ->
                     True
@@ -330,29 +350,6 @@ startPlayerMove moveDirection model =
             { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | row = origin.row + 1 }, reversing = False } }
 
         NoMove ->
-            model
-
-
-validMove : Model -> Model
-validMove model =
-    case model.currentMove of
-        Just currentMove ->
-            if
-                currentMove.target.row
-                    >= 0
-                    && currentMove.target.column
-                    >= 0
-                    && currentMove.target.row
-                    < gridSize.rowCount
-                    && currentMove.target.column
-                    < gridSize.columnCount
-            then
-                model
-
-            else
-                { model | currentMove = Nothing }
-
-        Nothing ->
             model
 
 
