@@ -548,7 +548,7 @@ viewArrowButtons =
             , viewArrowButton MoveUp "^"
             , viewArrowButton MoveDown "v"
             ]
-        , div [] [ text "or use arrow keys" ]
+        , div [] [ text "or use WASD / arrow keys" ]
         ]
 
 
