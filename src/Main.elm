@@ -12,6 +12,7 @@ import Html.Styled.Attributes exposing (css, href, src)
 import Html.Styled.Events exposing (onClick)
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
+import List.Extra
 
 
 
@@ -38,8 +39,12 @@ type alias Model =
     , row : Float
     , currentMove : CurrentMove
     , clock : Float
-    , walls : List Wall
+    , walls : Walls
     }
+
+
+type alias Walls =
+    List Wall
 
 
 type alias CurrentMove =
@@ -255,28 +260,46 @@ oppositeDirection direction =
 
 pathAheadClear : Model -> Bool
 pathAheadClear model =
-    let
-        wall =
-            List.head model.walls
+    case model.currentMove of
+        Just currentMove ->
+            if wallExistsBetweenPoints model.walls currentMove.origin currentMove.target then
+                (numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) model.column
+                    || numberBetween currentMove.origin.column (currentMove.origin.column - 0.4) model.column
+                )
+                    && (numberBetween currentMove.origin.row (currentMove.origin.row + 0.4) model.row
+                            || numberBetween currentMove.origin.row (currentMove.origin.row - 0.4) model.row
+                       )
 
-        --     |> List.find (\wall -> True)
-    in
-    case wall of
-        Just _ ->
-            case model.currentMove of
-                Just currentMove ->
-                    (numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) model.column
-                        || numberBetween currentMove.origin.column (currentMove.origin.column - 0.4) model.column
-                    )
-                        && (numberBetween currentMove.origin.row (currentMove.origin.row + 0.4) model.row
-                                || numberBetween currentMove.origin.row (currentMove.origin.row - 0.4) model.row
-                           )
-
-                Nothing ->
-                    True
+            else
+                True
 
         Nothing ->
             True
+
+
+wallExistsBetweenPoints : Walls -> Position -> Position -> Bool
+wallExistsBetweenPoints walls pointA pointB =
+    let
+        midpoint =
+            { column = (pointA.column + pointB.column) / 2
+            , row = (pointA.row + pointB.row) / 2
+            }
+
+        wall =
+            walls |> List.Extra.find (wallIsAtPoint midpoint)
+    in
+    case wall of
+        Just _ ->
+            True
+
+        Nothing ->
+            False
+
+
+wallIsAtPoint : Position -> Wall -> Bool
+wallIsAtPoint point wall =
+    (wall.column == point.column)
+        && (wall.row == point.row)
 
 
 playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position, target : Position, reversing : Bool } -> Bool
