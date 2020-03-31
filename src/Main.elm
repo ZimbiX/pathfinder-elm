@@ -88,26 +88,26 @@ init _ =
       , currentMove = Nothing
       , clock = 0
       , walls =
-            [ { column = 0, row = 0, orientation = Horizontal }
-            , { column = 1, row = 0, orientation = Horizontal }
-            , { column = 2, row = 0, orientation = Horizontal }
-            , { column = 3, row = 0, orientation = Horizontal }
-            , { column = 4, row = 0, orientation = Horizontal }
-            , { column = 0, row = 5, orientation = Horizontal }
-            , { column = 1, row = 5, orientation = Horizontal }
-            , { column = 2, row = 5, orientation = Horizontal }
-            , { column = 3, row = 5, orientation = Horizontal }
-            , { column = 4, row = 5, orientation = Horizontal }
-            , { column = 0, row = 0, orientation = Vertical }
-            , { column = 0, row = 1, orientation = Vertical }
-            , { column = 0, row = 2, orientation = Vertical }
-            , { column = 0, row = 3, orientation = Vertical }
-            , { column = 0, row = 4, orientation = Vertical }
-            , { column = 5, row = 0, orientation = Vertical }
-            , { column = 5, row = 1, orientation = Vertical }
-            , { column = 5, row = 2, orientation = Vertical }
-            , { column = 5, row = 3, orientation = Vertical }
-            , { column = 5, row = 4, orientation = Vertical }
+            [ { column = 0, row = -0.5, orientation = Horizontal }
+            , { column = 1, row = -0.5, orientation = Horizontal }
+            , { column = 2, row = -0.5, orientation = Horizontal }
+            , { column = 3, row = -0.5, orientation = Horizontal }
+            , { column = 4, row = -0.5, orientation = Horizontal }
+            , { column = 0, row = 4.5, orientation = Horizontal }
+            , { column = 1, row = 4.5, orientation = Horizontal }
+            , { column = 2, row = 4.5, orientation = Horizontal }
+            , { column = 3, row = 4.5, orientation = Horizontal }
+            , { column = 4, row = 4.5, orientation = Horizontal }
+            , { column = -0.5, row = 0, orientation = Vertical }
+            , { column = -0.5, row = 1, orientation = Vertical }
+            , { column = -0.5, row = 2, orientation = Vertical }
+            , { column = -0.5, row = 3, orientation = Vertical }
+            , { column = -0.5, row = 4, orientation = Vertical }
+            , { column = 4.5, row = 0, orientation = Vertical }
+            , { column = 4.5, row = 1, orientation = Vertical }
+            , { column = 4.5, row = 2, orientation = Vertical }
+            , { column = 4.5, row = 3, orientation = Vertical }
+            , { column = 4.5, row = 4, orientation = Vertical }
             ]
       }
     , Cmd.none
@@ -442,7 +442,7 @@ viewWall wall =
                 [ position absolute
                 , width (px 8)
                 , height (px 32)
-                , left (px ((wall.column |> xFromColumn) - 20 |> roundFloat))
+                , left (px ((wall.column |> xFromColumn) - 4 |> roundFloat))
                 , top (px ((wall.row |> yFromRow) - 15 |> roundFloat))
                 ]
             ]
@@ -456,7 +456,7 @@ viewWall wall =
                 , width (px 32)
                 , height (px 8)
                 , left (px ((wall.column |> xFromColumn) - 16 |> roundFloat))
-                , top (px ((wall.row |> yFromRow) - 20 |> roundFloat))
+                , top (px ((wall.row |> yFromRow) - 4 |> roundFloat))
                 ]
             ]
             []
