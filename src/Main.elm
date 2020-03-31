@@ -47,6 +47,7 @@ type alias CurrentMove =
         { origin : Position
         , target : Position
         , direction : MoveDirection
+        , reversing : Bool
         }
 
 
@@ -158,7 +159,7 @@ updatePlayerPosition deltaTime model =
         Just currentMove ->
             let
                 moveSpeed =
-                    0.007
+                    0.001
 
                 moveDistance =
                     moveSpeed * deltaTime
@@ -208,6 +209,9 @@ finishPlayerMove model =
             if playerWithinMoveBounds model currentMove then
                 model
 
+            else if currentMove.reversing then
+                { model | column = currentMove.origin.column, row = currentMove.origin.row, currentMove = Nothing }
+
             else
                 { model | column = currentMove.target.column, row = currentMove.target.row, currentMove = Nothing }
 
@@ -223,7 +227,7 @@ returnToOriginIfPathUnclear model =
     else
         case model.currentMove of
             Just currentMove ->
-                { model | currentMove = Just { currentMove | target = currentMove.origin, direction = MoveLeft } }
+                { model | currentMove = Just { currentMove | reversing = True, direction = MoveLeft } }
 
             -- TODO: Compensate for overshooting the oint of collision
             Nothing ->
@@ -242,7 +246,7 @@ pathAheadClear model =
         Just _ ->
             case model.currentMove of
                 Just currentMove ->
-                    numberBetween currentMove.origin.column 0.999 model.column
+                    numberBetween currentMove.origin.column (currentMove.origin.column + 0.5) model.column
 
                 Nothing ->
                     True
@@ -251,7 +255,7 @@ pathAheadClear model =
             True
 
 
-playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position, target : Position } -> Bool
+playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position, target : Position, reversing : Bool } -> Bool
 playerWithinMoveBounds model currentMove =
     let
         columnWithinMoveBounds =
@@ -314,16 +318,16 @@ startPlayerMove moveDirection model =
     in
     case moveDirection of
         MoveRight ->
-            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | column = origin.column + 1 } } }
+            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | column = origin.column + 1 }, reversing = False } }
 
         MoveLeft ->
-            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | column = origin.column - 1 } } }
+            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | column = origin.column - 1 }, reversing = False } }
 
         MoveUp ->
-            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | row = origin.row - 1 } } }
+            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | row = origin.row - 1 }, reversing = False } }
 
         MoveDown ->
-            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | row = origin.row + 1 } } }
+            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | row = origin.row + 1 }, reversing = False } }
 
         NoMove ->
             model
