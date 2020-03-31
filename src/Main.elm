@@ -141,7 +141,11 @@ update msg model =
             ( tryStartPlayerMove (moveDirectionFromKeyDown rawKey) model, Cmd.none )
 
         Tick deltaTime ->
-            ( updatePlayerPosition deltaTime model |> finishPlayerMove, Cmd.none )
+            ( updatePlayerPosition deltaTime model
+                |> returnToOriginIfPathUnclear
+                |> finishPlayerMove
+            , Cmd.none
+            )
 
 
 updatePlayerPosition : Float -> Model -> Model
@@ -209,6 +213,42 @@ finishPlayerMove model =
 
         Nothing ->
             model
+
+
+returnToOriginIfPathUnclear : Model -> Model
+returnToOriginIfPathUnclear model =
+    if pathAheadClear model then
+        model
+
+    else
+        case model.currentMove of
+            Just currentMove ->
+                { model | currentMove = Just { currentMove | target = currentMove.origin, direction = MoveLeft } }
+
+            -- TODO: Compensate for overshooting the oint of collision
+            Nothing ->
+                model
+
+
+pathAheadClear : Model -> Bool
+pathAheadClear model =
+    let
+        wall =
+            List.head model.walls
+
+        --     |> List.find (\wall -> True)
+    in
+    case wall of
+        Just _ ->
+            case model.currentMove of
+                Just currentMove ->
+                    numberBetween currentMove.origin.column 0.999 model.column
+
+                Nothing ->
+                    True
+
+        Nothing ->
+            True
 
 
 playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position, target : Position } -> Bool
