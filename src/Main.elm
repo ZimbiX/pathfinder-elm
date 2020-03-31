@@ -1,13 +1,14 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
 import Browser
-import Browser.Events exposing (onAnimationFrameDelta)
+import Browser.Events exposing (onAnimationFrameDelta, onMouseMove)
 import Css exposing (absolute, fontSize, height, left, opacity, position, px, top, width)
 import Debug
 import Html exposing (Html)
 import Html.Styled exposing (a, button, div, img, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, href, src)
 import Html.Styled.Events exposing (onClick)
+import Json.Decode
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
 import List.Extra
@@ -45,6 +46,7 @@ type alias Model =
     , currentMove : CurrentMove
     , clock : Float
     , walls : Walls
+    , mouse : Mouse
     }
 
 
@@ -123,6 +125,11 @@ init _ =
             , { hidden = True, opacity = 0, column = 4.5, row = 3, orientation = Vertical }
             , { hidden = True, opacity = 0, column = 4.5, row = 4, orientation = Vertical }
             ]
+      , mouse =
+            { position = { x = 0, y = 0 }
+
+            --, buttonDown = NoMouseButton
+            }
       }
     , Cmd.none
     )
@@ -136,6 +143,7 @@ type Msg
     = Tick Float
     | MoveButtonPressed MoveDirection
     | KeyDown RawKey
+    | MouseMoved Mouse
 
 
 type MoveDirection
@@ -166,6 +174,9 @@ update msg model =
                 |> updateWallsOpacity deltaTime
             , Cmd.none
             )
+
+        MouseMoved mouse ->
+            ( { model | mouse = Debug.log "mouse" mouse }, Cmd.none )
 
 
 updatePlayerPosition : Float -> Model -> Model
@@ -445,10 +456,43 @@ subscriptions model =
     Sub.batch
         [ Keyboard.downs KeyDown
         , onAnimationFrameDelta Tick
+        , onMouseMove (Json.Decode.map MouseMoved decodeMouseMove)
         ]
 
 
+type alias Mouse =
+    { position : MousePosition
 
+    --, buttonDown : MouseButton
+    }
+
+
+type alias MousePosition =
+    { x : Float
+    , y : Float
+    }
+
+
+type MouseButton
+    = LeftMouseButton
+    | RightMouseButton
+    | NoMouseButton
+
+
+decodeMouseMove : Json.Decode.Decoder Mouse
+decodeMouseMove =
+    Json.Decode.map Mouse
+        (Json.Decode.map2 MousePosition
+            (Json.Decode.field "pageX" Json.Decode.float)
+            (Json.Decode.field "pageY" Json.Decode.float)
+        )
+
+
+
+--(Json.Decode.map2 MouseButton
+--    (Json.Decode.field "buttons" Json.Decode.int)
+--)
+--buttonDown = Json.Decode.field "buttons"
 -- VIEW
 
 
