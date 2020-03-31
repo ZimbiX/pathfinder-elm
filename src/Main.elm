@@ -164,7 +164,7 @@ updatePlayerPosition deltaTime model =
         Just currentMove ->
             let
                 moveSpeed =
-                    0.001
+                    0.007
 
                 moveDistance =
                     moveSpeed * deltaTime
@@ -232,7 +232,11 @@ returnToOriginIfPathUnclear model =
     else
         case model.currentMove of
             Just currentMove ->
-                { model | currentMove = Just { currentMove | reversing = True, direction = oppositeDirection currentMove.direction } }
+                if currentMove.reversing then
+                    model
+
+                else
+                    { model | currentMove = Just { currentMove | reversing = True, direction = oppositeDirection currentMove.direction } }
 
             -- TODO: Compensate for overshooting the point of collision
             Nothing ->
