@@ -1,7 +1,7 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
 import Browser
-import Browser.Events exposing (onAnimationFrameDelta, onMouseMove)
+import Browser.Events exposing (onAnimationFrameDelta, onMouseDown, onMouseMove, onMouseUp)
 import Css exposing (absolute, fontSize, height, left, opacity, position, px, top, width)
 import Debug
 import Html exposing (Html)
@@ -453,11 +453,22 @@ updateWallOpacity deltaTime wall =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ Keyboard.downs KeyDown
-        , onAnimationFrameDelta Tick
-        , onMouseMove (Json.Decode.map MouseMoved decodeMouseMove)
-        ]
+    let
+        subsAlways =
+            [ Keyboard.downs KeyDown
+            , onAnimationFrameDelta Tick
+            , onMouseDown (Json.Decode.map MouseMoved decodeMouseMove)
+            , onMouseUp (Json.Decode.map MouseMoved decodeMouseMove)
+            ]
+
+        subMouseMove =
+            if model.mouse.buttonDown /= NoMouseButton then
+                [ onMouseMove (Json.Decode.map MouseMoved decodeMouseMove) ]
+
+            else
+                []
+    in
+    List.concat [ subsAlways, subMouseMove ] |> Sub.batch
 
 
 type alias Mouse =
