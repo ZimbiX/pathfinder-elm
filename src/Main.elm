@@ -5,9 +5,10 @@ import Browser.Events exposing (onAnimationFrameDelta, onMouseMove)
 import Css exposing (absolute, fontSize, height, left, opacity, position, px, top, width)
 import Debug
 import Html exposing (Html)
+import Html.Events.Extra
 import Html.Styled exposing (a, button, div, img, text, toUnstyled)
-import Html.Styled.Attributes exposing (css, href, src)
-import Html.Styled.Events exposing (onClick)
+import Html.Styled.Attributes exposing (css, draggable, href, src)
+import Html.Styled.Events exposing (on, onClick)
 import Json.Decode
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
@@ -127,8 +128,7 @@ init _ =
             ]
       , mouse =
             { position = { x = 0, y = 0 }
-
-            --, buttonDown = NoMouseButton
+            , buttonDown = NoMouseButton
             }
       }
     , Cmd.none
@@ -462,8 +462,7 @@ subscriptions model =
 
 type alias Mouse =
     { position : MousePosition
-
-    --, buttonDown : MouseButton
+    , buttonDown : MouseButton
     }
 
 
@@ -481,18 +480,32 @@ type MouseButton
 
 decodeMouseMove : Json.Decode.Decoder Mouse
 decodeMouseMove =
-    Json.Decode.map Mouse
+    Json.Decode.map2 Mouse
         (Json.Decode.map2 MousePosition
             (Json.Decode.field "pageX" Json.Decode.float)
             (Json.Decode.field "pageY" Json.Decode.float)
         )
+        (Json.Decode.field "buttons" mouseButtonDecoder)
+
+
+mouseButtonDecoder : Json.Decode.Decoder MouseButton
+mouseButtonDecoder =
+    Json.Decode.int
+        |> Json.Decode.andThen
+            (\buttonNum ->
+                case buttonNum of
+                    1 ->
+                        Json.Decode.succeed LeftMouseButton
+
+                    2 ->
+                        Json.Decode.succeed RightMouseButton
+
+                    _ ->
+                        Json.Decode.succeed NoMouseButton
+            )
 
 
 
---(Json.Decode.map2 MouseButton
---    (Json.Decode.field "buttons" Json.Decode.int)
---)
---buttonDown = Json.Decode.field "buttons"
 -- VIEW
 
 
@@ -536,7 +549,23 @@ viewBoard model =
 
 
 viewBackground =
-    img [ src "/assets/images/bg_level.png", css [ width (px 640), height (px 480) ] ] []
+    img
+        [ src "/assets/images/bg_level.png"
+        , css [ width (px 640), height (px 480) ]
+        , draggable "false"
+        , onContextMenuPreventDefault (Tick 0)
+        ]
+        []
+
+
+onContextMenuPreventDefault : msg -> Html.Styled.Attribute msg
+onContextMenuPreventDefault msg =
+    Html.Styled.Events.preventDefaultOn "contextmenu" (Json.Decode.map alwaysPreventDefault (Json.Decode.succeed msg))
+
+
+alwaysPreventDefault : msg -> ( msg, Bool )
+alwaysPreventDefault msg =
+    ( msg, True ) |> Debug.log "on context menu"
 
 
 viewPlayer model =
