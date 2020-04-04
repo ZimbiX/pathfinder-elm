@@ -13,6 +13,7 @@
             "elm/svg": "1.0.1",
             "elm-community/html-extra": "3.3.0",
             "elm-community/list-extra": "8.2.3",
+            "elm-community/maybe-extra": "5.2.0",
             "ohanhi/keyboard": "2.0.0",
             "rtfeldman/elm-css": "16.0.1"
         },

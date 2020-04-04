@@ -64,4 +64,4 @@ $ ./scripts/build
 
 ### Todo
 
-- Placing walls by free-form line drawing
+- Interpolate wall placement points to handle line being drawn quickly

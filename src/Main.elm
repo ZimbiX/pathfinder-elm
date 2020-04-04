@@ -14,6 +14,7 @@ import Json.Decode
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
 import List.Extra
+import Maybe.Extra
 
 
 
@@ -472,9 +473,6 @@ updateDrawing model =
     let
         drawing =
             case model.mouse.buttonDown of
-                NoMouseButton ->
-                    []
-
                 LeftMouseButton ->
                     List.concat
                         [ model.drawing
@@ -484,11 +482,11 @@ updateDrawing model =
                 RightMouseButton ->
                     model.drawing
 
+                NoMouseButton ->
+                    model.drawing
+
         snappedDrawingPoints =
             case model.mouse.buttonDown of
-                NoMouseButton ->
-                    []
-
                 LeftMouseButton ->
                     let
                         mousePosition =
@@ -519,8 +517,69 @@ updateDrawing model =
 
                 RightMouseButton ->
                     model.snappedDrawingPoints
+
+                NoMouseButton ->
+                    model.snappedDrawingPoints
     in
-    { model | drawing = drawing, snappedDrawingPoints = snappedDrawingPoints }
+    { model | drawing = drawing, snappedDrawingPoints = snappedDrawingPoints } |> finishDrawing
+
+
+finishDrawing : Model -> Model
+finishDrawing model =
+    case model.mouse.buttonDown of
+        NoMouseButton ->
+            case List.head model.snappedDrawingPoints of
+                Just _ ->
+                    let
+                        listOfMaybeWalls =
+                            listMapConsecutively createWall model.snappedDrawingPoints
+
+                        newWalls =
+                            listOfMaybeWalls |> Maybe.Extra.values |> Debug.log "New walls"
+
+                        walls =
+                            List.concat [ newWalls, model.walls ]
+                    in
+                    { model | drawing = [], snappedDrawingPoints = [], walls = walls }
+
+                Nothing ->
+                    model
+
+        _ ->
+            model
+
+
+createWall : Position -> Position -> Maybe Wall
+createWall pointA pointB =
+    if distanceBetweenPoints pointA pointB == 1 then
+        if pointA.column == pointB.column then
+            let
+                orientation =
+                    Vertical
+
+                column =
+                    pointA.column
+
+                row =
+                    (pointA.row + pointB.row) / 2
+            in
+            Just { hidden = False, opacity = 1, column = column, row = row, orientation = orientation }
+
+        else
+            let
+                orientation =
+                    Horizontal
+
+                column =
+                    (pointA.column + pointB.column) / 2
+
+                row =
+                    pointA.row
+            in
+            Just { hidden = False, opacity = 1, column = column, row = row, orientation = orientation }
+
+    else
+        Nothing
 
 
 distanceBetweenPoints : Position -> Position -> Float
