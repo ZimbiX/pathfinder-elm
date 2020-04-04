@@ -618,6 +618,8 @@ viewPlayer model =
             , left (px ((model.position.column |> xFromColumn) - (11 / 2) |> roundFloat))
             , top (px ((model.position.row |> yFromRow) - 31 / 2 + 1 |> roundFloat))
             ]
+        , draggable "false"
+        , onContextMenuPreventDefault (Tick 0)
         ]
         []
 
@@ -638,6 +640,8 @@ viewWall wall =
                 , top (px ((wall.row |> yFromRow) - 15 |> roundFloat))
                 , opacity (Css.num wall.opacity)
                 ]
+            , draggable "false"
+            , onContextMenuPreventDefault (Tick 0)
             ]
             []
 
@@ -652,6 +656,8 @@ viewWall wall =
                 , top (px ((wall.row |> yFromRow) - 4 |> roundFloat))
                 , opacity (Css.num wall.opacity)
                 ]
+            , draggable "false"
+            , onContextMenuPreventDefault (Tick 0)
             ]
             []
 
