@@ -1,8 +1,9 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
+import Array
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta, onMouseDown, onMouseMove, onMouseUp)
-import Css exposing (absolute, fontSize, height, left, opacity, position, px, top, width)
+import Css exposing (absolute, backgroundColor, border3, fontSize, height, hex, left, opacity, position, px, rad, rotate, solid, top, transform, width)
 import Debug
 import Html exposing (Html)
 import Html.Events.Extra
@@ -48,6 +49,7 @@ type alias Model =
     , clock : Float
     , walls : Walls
     , mouse : Mouse
+    , drawing : Drawing
     }
 
 
@@ -80,6 +82,14 @@ type alias Wall =
 type Orientation
     = Horizontal
     | Vertical
+
+
+type alias Drawing =
+    List Coordinate
+
+
+type alias Coordinate =
+    { x : Float, y : Float }
 
 
 gridBorder =
@@ -130,6 +140,7 @@ init _ =
             { position = { x = 0, y = 0 }
             , buttonDown = NoMouseButton
             }
+      , drawing = []
       }
     , Cmd.none
     )
@@ -143,7 +154,7 @@ type Msg
     = Tick Float
     | MoveButtonPressed MoveDirection
     | KeyDown RawKey
-    | MouseMoved Mouse
+    | MouseUpdated Mouse
 
 
 type MoveDirection
@@ -175,8 +186,11 @@ update msg model =
             , Cmd.none
             )
 
-        MouseMoved mouse ->
-            ( { model | mouse = Debug.log "mouse" mouse }, Cmd.none )
+        MouseUpdated mouse ->
+            ( { model | mouse = Debug.log "mouse" mouse }
+                |> updateDrawing
+            , Cmd.none
+            )
 
 
 updatePlayerPosition : Float -> Model -> Model
@@ -447,6 +461,26 @@ updateWallOpacity deltaTime wall =
     { wall | opacity = opacity }
 
 
+updateDrawing : Model -> Model
+updateDrawing model =
+    let
+        drawing =
+            case model.mouse.buttonDown of
+                NoMouseButton ->
+                    []
+
+                LeftMouseButton ->
+                    List.concat
+                        [ model.drawing
+                        , [ model.mouse.position ]
+                        ]
+
+                RightMouseButton ->
+                    model.drawing
+    in
+    { model | drawing = drawing }
+
+
 
 -- SUBSCRIPTIONS
 
@@ -457,13 +491,13 @@ subscriptions model =
         subsAlways =
             [ Keyboard.downs KeyDown
             , onAnimationFrameDelta Tick
-            , onMouseDown (Json.Decode.map MouseMoved decodeMouseMove)
-            , onMouseUp (Json.Decode.map MouseMoved decodeMouseMove)
+            , onMouseDown (Json.Decode.map MouseUpdated decodeMouseMove)
+            , onMouseUp (Json.Decode.map MouseUpdated decodeMouseMove)
             ]
 
         subMouseMove =
             if model.mouse.buttonDown /= NoMouseButton then
-                [ onMouseMove (Json.Decode.map MouseMoved decodeMouseMove) ]
+                [ onMouseMove (Json.Decode.map MouseUpdated decodeMouseMove) ]
 
             else
                 []
@@ -472,14 +506,8 @@ subscriptions model =
 
 
 type alias Mouse =
-    { position : MousePosition
+    { position : Coordinate
     , buttonDown : MouseButton
-    }
-
-
-type alias MousePosition =
-    { x : Float
-    , y : Float
     }
 
 
@@ -492,7 +520,7 @@ type MouseButton
 decodeMouseMove : Json.Decode.Decoder Mouse
 decodeMouseMove =
     Json.Decode.map2 Mouse
-        (Json.Decode.map2 MousePosition
+        (Json.Decode.map2 Coordinate
             (Json.Decode.field "pageX" Json.Decode.float)
             (Json.Decode.field "pageY" Json.Decode.float)
         )
@@ -555,6 +583,7 @@ viewBoard model =
               , viewPlayer model
               ]
             , viewWalls model
+            , viewDrawing model
             ]
         )
 
@@ -576,7 +605,7 @@ onContextMenuPreventDefault msg =
 
 alwaysPreventDefault : msg -> ( msg, Bool )
 alwaysPreventDefault msg =
-    ( msg, True ) |> Debug.log "on context menu"
+    ( msg, True )
 
 
 viewPlayer model =
@@ -625,6 +654,88 @@ viewWall wall =
                 ]
             ]
             []
+
+
+viewDrawing model =
+    --List.map model.drawing
+    let
+        segmentsArray =
+            Array.fromList model.drawing
+
+        segmentsCount =
+            Array.length segmentsArray
+
+        getLastElement =
+            Array.get (segmentsCount - 1)
+
+        drawnSegments =
+            case List.head model.drawing of
+                Just firstCoord ->
+                    case getLastElement segmentsArray of
+                        Just lastCoord ->
+                            viewDrawingSegment (Debug.log "firstCoord" firstCoord) (Debug.log "lastCoord" lastCoord)
+
+                        Nothing ->
+                            []
+
+                Nothing ->
+                    []
+    in
+    [ div [] drawnSegments ]
+
+
+viewDrawingSegment coordA coordB =
+    let
+        x1 =
+            coordA.x
+
+        x2 =
+            coordB.x
+
+        y1 =
+            coordA.y
+
+        y2 =
+            coordB.y
+
+        xm =
+            (x1 + x2) / 2
+
+        ym =
+            (y1 + y2) / 2
+
+        ht =
+            y2 - y1
+
+        w =
+            x2 - x1
+
+        h =
+            sqrt (ht * ht + w * w)
+
+        l =
+            xm - h / 2
+
+        t =
+            ym
+
+        angle =
+            atan2 ht w
+    in
+    [ div
+        [ css
+            [ position absolute
+            , left (px l)
+            , top (px t)
+            , width (px h)
+            , height (px 3)
+            , backgroundColor (hex "#000")
+            , transform (rotate (rad angle))
+            ]
+            |> Debug.log "css"
+        ]
+        []
+    ]
 
 
 viewArrowButtons =
