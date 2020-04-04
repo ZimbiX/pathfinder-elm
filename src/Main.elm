@@ -656,30 +656,33 @@ viewWall wall =
             []
 
 
-viewDrawing model =
-    --List.map model.drawing
-    let
-        segmentsArray =
-            Array.fromList model.drawing
-
-        segmentsCount =
-            Array.length segmentsArray
-
-        getLastElement =
-            Array.get (segmentsCount - 1)
-
-        drawnSegments =
-            case List.head model.drawing of
-                Just firstCoord ->
-                    case getLastElement segmentsArray of
-                        Just lastCoord ->
-                            viewDrawingSegment (Debug.log "firstCoord" firstCoord) (Debug.log "lastCoord" lastCoord)
+listMapConsecutively : (a -> a -> b) -> List a -> List b
+listMapConsecutively mapFn list =
+    case List.head list of
+        Just first ->
+            case List.tail list of
+                Just tail ->
+                    case List.head tail of
+                        Just second ->
+                            List.concat
+                                [ [ mapFn first second ]
+                                , listMapConsecutively mapFn tail
+                                ]
 
                         Nothing ->
                             []
 
                 Nothing ->
                     []
+
+        Nothing ->
+            []
+
+
+viewDrawing model =
+    let
+        drawnSegments =
+            listMapConsecutively viewDrawingSegment model.drawing
     in
     [ div [] drawnSegments ]
 
@@ -722,7 +725,7 @@ viewDrawingSegment coordA coordB =
         angle =
             atan2 ht w
     in
-    [ div
+    div
         [ css
             [ position absolute
             , left (px l)
@@ -732,10 +735,8 @@ viewDrawingSegment coordA coordB =
             , backgroundColor (hex "#000")
             , transform (rotate (rad angle))
             ]
-            |> Debug.log "css"
         ]
         []
-    ]
 
 
 viewArrowButtons =
