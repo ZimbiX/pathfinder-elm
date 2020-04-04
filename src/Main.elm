@@ -50,6 +50,7 @@ type alias Model =
     , walls : Walls
     , mouse : Mouse
     , drawing : Drawing
+    , snappedDrawingPoints : SnappedDrawingPoints
     }
 
 
@@ -86,6 +87,10 @@ type Orientation
 
 type alias Drawing =
     List Coordinate
+
+
+type alias SnappedDrawingPoints =
+    List Position
 
 
 type alias Coordinate =
@@ -141,6 +146,7 @@ init _ =
             , buttonDown = NoMouseButton
             }
       , drawing = []
+      , snappedDrawingPoints = []
       }
     , Cmd.none
     )
@@ -477,8 +483,68 @@ updateDrawing model =
 
                 RightMouseButton ->
                     model.drawing
+
+        snappedDrawingPoints =
+            case model.mouse.buttonDown of
+                NoMouseButton ->
+                    []
+
+                LeftMouseButton ->
+                    let
+                        mousePosition =
+                            { column = model.mouse.position.x |> columnFromX
+                            , row = model.mouse.position.y |> rowFromY
+                            }
+
+                        nearestGridIntersection =
+                            findNearestGridIntersection mousePosition
+
+                        distanceToNearestGridIntersection =
+                            distanceBetweenPoints mousePosition nearestGridIntersection
+                    in
+                    if distanceToNearestGridIntersection < 0.4 then
+                        case List.head model.snappedDrawingPoints of
+                            Nothing ->
+                                [ nearestGridIntersection ]
+
+                            Just previousSnappedDrawingPoint ->
+                                if nearestGridIntersection == previousSnappedDrawingPoint then
+                                    model.snappedDrawingPoints
+
+                                else
+                                    List.concat [ [ nearestGridIntersection ], model.snappedDrawingPoints ]
+
+                    else
+                        model.snappedDrawingPoints
+
+                RightMouseButton ->
+                    model.snappedDrawingPoints
     in
-    { model | drawing = drawing }
+    { model | drawing = drawing, snappedDrawingPoints = snappedDrawingPoints }
+
+
+distanceBetweenPoints : Position -> Position -> Float
+distanceBetweenPoints pointA pointB =
+    let
+        columnDiff =
+            pointA.column - pointB.column
+
+        rowDiff =
+            pointA.row - pointB.row
+    in
+    sqrt (columnDiff * columnDiff + rowDiff * rowDiff)
+
+
+findNearestGridIntersection : Position -> Position
+findNearestGridIntersection position =
+    { row = position.row |> roundToNearestHalf
+    , column = position.column |> roundToNearestHalf
+    }
+
+
+roundToNearestHalf : Float -> Float
+roundToNearestHalf n =
+    (n + 0.5 |> roundFloat) - 0.5
 
 
 
@@ -572,6 +638,24 @@ yFromRow row =
     gridBorder.top + gridSize.cellHeight * (0.5 + row)
 
 
+
+-- Workings:
+-- x = gridBorder.left + gridSize.cellWidth * (0.5 + column) ; minus gridBorder.left
+-- x - gridBorder.left = gridSize.cellWidth * (0.5 + column) ; divide by gridSize.cellWidth
+-- (x - gridBorder.left) / gridSize.cellWidth = 0.5 + column ; minus 0.5
+-- (x - gridBorder.left) / gridSize.cellWidth - 0.5 = column
+
+
+columnFromX : Float -> Float
+columnFromX x =
+    (x - gridBorder.left) / gridSize.cellWidth - 0.5
+
+
+rowFromY : Float -> Float
+rowFromY y =
+    (y - gridBorder.top) / gridSize.cellHeight - 0.5
+
+
 roundFloat =
     round >> toFloat
 
@@ -584,6 +668,7 @@ viewBoard model =
               ]
             , viewWalls model
             , viewDrawing model
+            , viewSnappedDrawingPoints model.snappedDrawingPoints
             ]
         )
 
@@ -741,6 +826,26 @@ viewDrawingSegment coordA coordB =
             , backgroundColor (hex "#000")
             , transform (rotate (rad angle))
             ]
+        ]
+        []
+
+
+viewSnappedDrawingPoints snappedDrawingPoints =
+    List.map viewSnappedDrawingPoint snappedDrawingPoints
+
+
+viewSnappedDrawingPoint snappedDrawingPoint =
+    div
+        [ css
+            [ position absolute
+            , width (px 4)
+            , height (px 4)
+            , left (px ((snappedDrawingPoint.column |> xFromColumn) - (4 / 2) |> roundFloat))
+            , top (px ((snappedDrawingPoint.row |> yFromRow) - (4 / 2) |> roundFloat))
+            , backgroundColor (hex "#c00")
+            ]
+        , draggable "false"
+        , onContextMenuPreventDefault (Tick 0)
         ]
         []
 
