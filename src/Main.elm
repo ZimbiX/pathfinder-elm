@@ -140,7 +140,6 @@ init _ =
             , { hidden = True, opacity = 0, column = 4.5, row = 1, orientation = Vertical }
             , { hidden = True, opacity = 0, column = 4.5, row = 2, orientation = Vertical }
             , { hidden = True, opacity = 0, column = 4.5, row = 3, orientation = Vertical }
-            , { hidden = True, opacity = 0, column = 4.5, row = 4, orientation = Vertical }
             ]
       , mouse =
             { position = { x = 0, y = 0 }
