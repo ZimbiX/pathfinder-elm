@@ -511,7 +511,7 @@ updateDrawing model =
                         distanceToNearestGridIntersection =
                             distanceBetweenPoints mousePosition nearestGridIntersection
                     in
-                    if distanceToNearestGridIntersection < 0.4 then
+                    if mousePosition.column < gridSize.columnCount && distanceToNearestGridIntersection < 0.4 then
                         case List.head model.snappedDrawingPoints of
                             Nothing ->
                                 [ nearestGridIntersection ]
@@ -554,7 +554,7 @@ finishDrawing model =
                     { model | drawing = [], snappedDrawingPoints = [], walls = walls }
 
                 Nothing ->
-                    model
+                    { model | drawing = [], snappedDrawingPoints = [] }
 
         _ ->
             model
