@@ -3,13 +3,14 @@ module Main exposing (Model, Msg(..), init, main, update, view)
 import Array
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
-import Css exposing (absolute, backgroundColor, border3, fontSize, height, hex, left, opacity, position, px, rad, rotate, solid, top, transform, width)
+import Css exposing (absolute, backgroundColor, border3, fontSize, height, hex, left, opacity, px, rad, rotate, solid, top, transform, width)
 import Debug
 import Html exposing (Html)
 import Html.Events.Extra
 import Html.Styled exposing (a, button, div, img, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, draggable, href, src)
 import Html.Styled.Events exposing (on, onClick)
+import Html.Styled.Lazy exposing (lazy)
 import Json.Decode
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
@@ -730,15 +731,12 @@ viewBoard model =
         , updateMouseOn "pointerup"
         , updateMouseOn "pointermove"
         ]
-        (List.concat
-            [ [ viewBackground
-              , viewPlayer model
-              ]
-            , viewWalls model
-            , viewDrawing model
-            , viewSnappedDrawingPoints model.snappedDrawingPoints
-            ]
-        )
+        [ viewBackground
+        , lazy viewPlayer model.position
+        , lazy viewWalls model.walls
+        , lazy viewDrawing model.drawing
+        , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
+        ]
 
 
 viewBackground =
@@ -761,15 +759,15 @@ alwaysPreventDefault msg =
     ( msg, True )
 
 
-viewPlayer model =
+viewPlayer position =
     img
         [ src "/assets/images/man.png"
         , css
-            [ position absolute
+            [ Css.position absolute
             , width (px 11)
             , height (px 31)
-            , left (px ((model.position.column |> xFromColumn) - (11 / 2) |> roundFloat))
-            , top (px ((model.position.row |> yFromRow) - 31 / 2 + 1 |> roundFloat))
+            , left (px ((position.column |> xFromColumn) - (11 / 2) |> roundFloat))
+            , top (px ((position.row |> yFromRow) - 31 / 2 + 1 |> roundFloat))
             ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
@@ -777,8 +775,8 @@ viewPlayer model =
         []
 
 
-viewWalls model =
-    model.walls |> List.map viewWall
+viewWalls walls =
+    div [] (walls |> List.map viewWall)
 
 
 viewWall wall =
@@ -786,7 +784,7 @@ viewWall wall =
         img
             [ src "/assets/images/wall_v.png"
             , css
-                [ position absolute
+                [ Css.position absolute
                 , width (px 8)
                 , height (px 32)
                 , left (px ((wall.column |> xFromColumn) - 4 |> roundFloat))
@@ -802,7 +800,7 @@ viewWall wall =
         img
             [ src "/assets/images/wall_h.png"
             , css
-                [ position absolute
+                [ Css.position absolute
                 , width (px 32)
                 , height (px 8)
                 , left (px ((wall.column |> xFromColumn) - 16 |> roundFloat))
@@ -838,12 +836,12 @@ listMapConsecutively mapFn list =
             []
 
 
-viewDrawing model =
+viewDrawing drawing =
     let
         drawnSegments =
-            listMapConsecutively viewDrawingSegment model.drawing
+            listMapConsecutively viewDrawingSegment drawing
     in
-    [ div [] drawnSegments ]
+    div [] drawnSegments
 
 
 viewDrawingSegment coordA coordB =
@@ -886,7 +884,7 @@ viewDrawingSegment coordA coordB =
     in
     div
         [ css
-            [ position absolute
+            [ Css.position absolute
             , left (px l)
             , top (px t)
             , width (px h)
@@ -899,13 +897,13 @@ viewDrawingSegment coordA coordB =
 
 
 viewSnappedDrawingPoints snappedDrawingPoints =
-    List.map viewSnappedDrawingPoint snappedDrawingPoints
+    div [] (snappedDrawingPoints |> List.map viewSnappedDrawingPoint)
 
 
 viewSnappedDrawingPoint snappedDrawingPoint =
     div
         [ css
-            [ position absolute
+            [ Css.position absolute
             , width (px 4)
             , height (px 4)
             , left (px ((snappedDrawingPoint.column |> xFromColumn) - (4 / 2) |> roundFloat))
