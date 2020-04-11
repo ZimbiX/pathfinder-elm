@@ -64,4 +64,10 @@ $ ./scripts/build
 
 ### Todo
 
-- Interpolate wall placement points to handle line being drawn quickly
+- Deduplicate walls when finishing drawing
+- Add gold
+- Wall removal
+- Turning all walls invisible
+- Second player
+- Backend to store game state
+- Sync game state with backend

@@ -1,5 +1,6 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
+import Basics.Extra exposing (fractionalModBy)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
 import Css exposing (absolute, backgroundColor, border3, fontSize, height, hex, left, opacity, px, rad, rotate, solid, top, transform, width)
@@ -206,7 +207,7 @@ update msg model =
             )
 
         MouseUpdated mouse ->
-            ( { model | mouse = Debug.log "mouse" mouse }
+            ( { model | mouse = mouse }
                 |> updateDrawing
             , Cmd.none
             )
@@ -513,16 +514,7 @@ updateDrawing model =
                             distanceBetweenPoints mousePosition nearestGridIntersection
                     in
                     if mousePosition.column < gridSize.columnCount && distanceToNearestGridIntersection < 0.4 then
-                        case List.head model.snappedDrawingPoints of
-                            Nothing ->
-                                [ nearestGridIntersection ]
-
-                            Just previousSnappedDrawingPoint ->
-                                if nearestGridIntersection == previousSnappedDrawingPoint then
-                                    model.snappedDrawingPoints
-
-                                else
-                                    List.concat [ [ nearestGridIntersection ], model.snappedDrawingPoints ]
+                        addGridIntersectionToDrawingWithInterpolation model.snappedDrawingPoints nearestGridIntersection
 
                     else
                         model.snappedDrawingPoints
@@ -534,6 +526,70 @@ updateDrawing model =
                     model.snappedDrawingPoints
     in
     { model | drawing = drawing, snappedDrawingPoints = snappedDrawingPoints } |> finishDrawing
+
+
+addGridIntersectionToDrawingWithInterpolation : SnappedDrawingPoints -> Position -> SnappedDrawingPoints
+addGridIntersectionToDrawingWithInterpolation snappedDrawingPoints gridIntersection =
+    case List.head snappedDrawingPoints of
+        Nothing ->
+            [ gridIntersection ]
+
+        Just previousSnappedDrawingPoint ->
+            if gridIntersection == previousSnappedDrawingPoint then
+                snappedDrawingPoints
+
+            else if gridIntersection.column == previousSnappedDrawingPoint.column then
+                let
+                    interpolatedRows =
+                        rangeFloatByIncrementDirected previousSnappedDrawingPoint.row gridIntersection.row
+
+                    interpolatedPoints =
+                        interpolatedRows |> List.map (\row -> { gridIntersection | row = row })
+                in
+                case List.tail interpolatedPoints of
+                    Just pendingInterpolatedPoints ->
+                        List.concat [ pendingInterpolatedPoints |> List.reverse, snappedDrawingPoints ]
+
+                    Nothing ->
+                        snappedDrawingPoints
+
+            else if gridIntersection.row == previousSnappedDrawingPoint.row then
+                let
+                    interpolatedColumns =
+                        rangeFloatByIncrementDirected previousSnappedDrawingPoint.column gridIntersection.column
+
+                    interpolatedPoints =
+                        interpolatedColumns |> List.map (\column -> { gridIntersection | column = column })
+                in
+                case List.tail interpolatedPoints of
+                    Just pendingInterpolatedPoints ->
+                        List.concat [ pendingInterpolatedPoints |> List.reverse, snappedDrawingPoints ]
+
+                    Nothing ->
+                        snappedDrawingPoints
+
+            else
+                -- Diagonal; can't interpolate
+                List.concat [ [ gridIntersection ], snappedDrawingPoints ]
+
+
+rangeFloatByIncrementDirected : Float -> Float -> List Float
+rangeFloatByIncrementDirected start end =
+    if start < end then
+        rangeFloatByIncrement start end
+
+    else
+        rangeFloatByIncrement end start |> List.reverse
+
+
+rangeFloatByIncrement : Float -> Float -> List Float
+rangeFloatByIncrement start end =
+    let
+        offset =
+            fractionalModBy 1 start
+    in
+    List.range (floor start) (floor end)
+        |> List.map (\n -> toFloat n + offset)
 
 
 finishDrawing : Model -> Model
