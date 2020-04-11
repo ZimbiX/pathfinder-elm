@@ -1,6 +1,5 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
-import Array
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
 import Css exposing (absolute, backgroundColor, border3, fontSize, height, hex, left, opacity, px, rad, rotate, solid, top, transform, width)
@@ -10,7 +9,8 @@ import Html.Events.Extra
 import Html.Styled exposing (a, button, div, img, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, draggable, href, src)
 import Html.Styled.Events exposing (on, onClick)
-import Html.Styled.Lazy exposing (lazy)
+import Html.Styled.Keyed as Keyed
+import Html.Styled.Lazy exposing (lazy, lazy2)
 import Json.Decode
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
@@ -839,9 +839,17 @@ listMapConsecutively mapFn list =
 viewDrawing drawing =
     let
         drawnSegments =
-            listMapConsecutively viewDrawingSegment drawing
+            drawing |> listMapConsecutively viewKeyedDrawingSegment
     in
-    div [] drawnSegments
+    Keyed.node "div" [] drawnSegments
+
+
+viewKeyedDrawingSegment coordA coordB =
+    ( coordToString coordA ++ coordToString coordB, lazy2 viewDrawingSegment coordA coordB )
+
+
+coordToString coord =
+    String.fromFloat coord.x ++ "," ++ String.fromFloat coord.y
 
 
 viewDrawingSegment coordA coordB =
