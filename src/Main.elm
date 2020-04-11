@@ -86,6 +86,18 @@ type Orientation
     | Vertical
 
 
+type alias Mouse =
+    { position : Coordinate
+    , buttonDown : MouseButton
+    }
+
+
+type MouseButton
+    = LeftMouseButton
+    | RightMouseButton
+    | NoMouseButton
+
+
 type alias Drawing =
     List Coordinate
 
@@ -617,16 +629,21 @@ subscriptions model =
         ]
 
 
-type alias Mouse =
-    { position : Coordinate
-    , buttonDown : MouseButton
-    }
+updateMouseOn : String -> Html.Styled.Attribute Msg
+updateMouseOn eventName =
+    let
+        decoder =
+            decodeMouseMove
+                |> Json.Decode.map (\mouse -> MouseUpdated mouse)
+                |> Json.Decode.map options
 
-
-type MouseButton
-    = LeftMouseButton
-    | RightMouseButton
-    | NoMouseButton
+        options message =
+            { message = message
+            , stopPropagation = False
+            , preventDefault = True
+            }
+    in
+    Html.Styled.Events.custom eventName decoder
 
 
 decodeMouseMove : Json.Decode.Decoder Mouse
@@ -722,23 +739,6 @@ viewBoard model =
             , viewSnappedDrawingPoints model.snappedDrawingPoints
             ]
         )
-
-
-updateMouseOn : String -> Html.Styled.Attribute Msg
-updateMouseOn eventName =
-    let
-        decoder =
-            decodeMouseMove
-                |> Json.Decode.map (\mouse -> MouseUpdated mouse)
-                |> Json.Decode.map options
-
-        options message =
-            { message = message
-            , stopPropagation = False
-            , preventDefault = True
-            }
-    in
-    Html.Styled.Events.custom eventName decoder
 
 
 viewBackground =
