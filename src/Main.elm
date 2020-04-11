@@ -2,7 +2,7 @@ module Main exposing (Model, Msg(..), init, main, update, view)
 
 import Array
 import Browser
-import Browser.Events exposing (onAnimationFrameDelta, onMouseDown, onMouseMove, onMouseUp)
+import Browser.Events exposing (onAnimationFrameDelta)
 import Css exposing (absolute, backgroundColor, border3, fontSize, height, hex, left, opacity, position, px, rad, rotate, solid, top, transform, width)
 import Debug
 import Html exposing (Html)
@@ -611,22 +611,10 @@ roundToNearestHalf n =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    let
-        subsAlways =
-            [ Keyboard.downs KeyDown
-            , onAnimationFrameDelta Tick
-            , onMouseDown (Json.Decode.map MouseUpdated decodeMouseMove)
-            , onMouseUp (Json.Decode.map MouseUpdated decodeMouseMove)
-            ]
-
-        subMouseMove =
-            if model.mouse.buttonDown /= NoMouseButton then
-                [ onMouseMove (Json.Decode.map MouseUpdated decodeMouseMove) ]
-
-            else
-                []
-    in
-    List.concat [ subsAlways, subMouseMove ] |> Sub.batch
+    Sub.batch
+        [ Keyboard.downs KeyDown
+        , onAnimationFrameDelta Tick
+        ]
 
 
 type alias Mouse =
@@ -719,7 +707,12 @@ roundFloat =
 
 
 viewBoard model =
-    div [ css [ width (px 640), height (px 480) ] ]
+    div
+        [ css [ width (px 640), height (px 480), Css.touchAction Css.none ]
+        , updateMouseOn "pointerdown"
+        , updateMouseOn "pointerup"
+        , updateMouseOn "pointermove"
+        ]
         (List.concat
             [ [ viewBackground
               , viewPlayer model
@@ -729,6 +722,23 @@ viewBoard model =
             , viewSnappedDrawingPoints model.snappedDrawingPoints
             ]
         )
+
+
+updateMouseOn : String -> Html.Styled.Attribute Msg
+updateMouseOn eventName =
+    let
+        decoder =
+            decodeMouseMove
+                |> Json.Decode.map (\mouse -> MouseUpdated mouse)
+                |> Json.Decode.map options
+
+        options message =
+            { message = message
+            , stopPropagation = False
+            , preventDefault = True
+            }
+    in
+    Html.Styled.Events.custom eventName decoder
 
 
 viewBackground =
