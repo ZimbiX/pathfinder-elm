@@ -1055,7 +1055,7 @@ alwaysPreventDefault msg =
 
 viewPlayer position =
     img
-        [ src "/assets/images/man.png"
+        [ src "/assets/images/player_hd.png"
         , css
             [ Css.position absolute
             , width (px 11)
