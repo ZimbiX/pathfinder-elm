@@ -3,7 +3,7 @@ module Main exposing (Model, Msg(..), init, main, update, view)
 import Basics.Extra exposing (fractionalModBy)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
-import Css exposing (absolute, backgroundColor, border3, fontSize, height, hex, left, opacity, px, rad, rotate, solid, top, transform, width)
+import Css exposing (absolute, backgroundColor, border3, fontSize, height, hex, left, opacity, pct, px, rad, rotate, solid, top, transform, width)
 import Debug
 import Html exposing (Html)
 import Html.Events.Extra
@@ -26,6 +26,20 @@ import Maybe.Extra
 settings =
     { playerMoveSpeed = 0.007
     , wallOpacitySpeed = 0.008
+    }
+
+
+gridBorder =
+    { top = 64
+    , left = 144
+    }
+
+
+gridSize =
+    { rowCount = 11
+    , columnCount = 11
+    , cellWidth = 32
+    , cellHeight = 32
     }
 
 
@@ -120,20 +134,6 @@ type alias SnappedDrawingPoints =
 
 type alias Coordinate =
     { x : Float, y : Float }
-
-
-gridBorder =
-    { top = 0
-    , left = 0
-    }
-
-
-gridSize =
-    { rowCount = 15
-    , columnCount = 15
-    , cellWidth = 32
-    , cellHeight = 32
-    }
 
 
 init : () -> ( Model, Cmd Msg )
@@ -983,6 +983,7 @@ viewBoard model =
         , updateMouseOn "pointermove"
         ]
         [ viewBackground
+        , viewBoardCells
         , lazy viewGolds model.golds
         , lazy viewPlayer model.position
         , lazy viewWalls model.walls
@@ -993,8 +994,38 @@ viewBoard model =
 
 viewBackground =
     img
-        [ src "/assets/images/bg_level.png"
-        , css [ width (px 640), height (px 480) ]
+        [ src "/assets/images/bg_full.png"
+        , css [ width (pct 100), height (pct 100) ]
+        , draggable "false"
+        , onContextMenuPreventDefault (Tick 0)
+        ]
+        []
+
+
+viewBoardCells =
+    div []
+        (List.concatMap
+            (\column ->
+                List.map
+                    (\row ->
+                        viewBoardCell { row = row |> toFloat, column = column |> toFloat }
+                    )
+                    (List.range 0 (gridSize.rowCount - 1))
+            )
+            (List.range 0 (gridSize.columnCount - 1))
+        )
+
+
+viewBoardCell position =
+    img
+        [ src "/assets/images/grid_cell.png"
+        , css
+            [ Css.position absolute
+            , width (px gridSize.cellWidth)
+            , height (px gridSize.cellHeight)
+            , left (px (gridSize.cellWidth * position.column + gridBorder.left))
+            , top (px (gridSize.cellHeight * position.row + gridBorder.top))
+            ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
         ]
