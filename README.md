@@ -66,9 +66,9 @@ $ ./scripts/build
 
 - Wall removal
 - Unit tests
+- Finishing maze drawing
 - Split out to multiple files
 - Deduplicate walls when finishing drawing
-- Turning all walls invisible
 - Second player
 - Backend to store game state
 - Sync game state with backend

@@ -223,6 +223,8 @@ update msg model =
         MouseUpdated mouse ->
             ( { model | mouse = mouse }
                 |> updateDrawing
+                |> createGold
+                |> finishDrawing
             , Cmd.none
             )
 
@@ -550,7 +552,7 @@ updateDrawing model =
                 _ ->
                     model.snappedDrawingPoints
     in
-    { model | drawing = drawing, snappedDrawingPoints = snappedDrawingPoints } |> finishDrawing
+    { model | drawing = drawing, snappedDrawingPoints = snappedDrawingPoints }
 
 
 addGridIntersectionToDrawingWithInterpolation : SnappedDrawingPoints -> Position -> SnappedDrawingPoints
@@ -636,13 +638,7 @@ finishDrawing model =
                     { model | drawing = [], snappedDrawingPoints = [], walls = walls }
 
                 Nothing ->
-                    case List.head model.drawing of
-                        Just _ ->
-                            { model | drawing = [], snappedDrawingPoints = [] }
-                                |> createGold
-
-                        Nothing ->
-                            { model | drawing = [], snappedDrawingPoints = [] }
+                    { model | drawing = [], snappedDrawingPoints = [] }
 
         _ ->
             model
@@ -714,14 +710,29 @@ roundToNearestHalf n =
 
 createGold : Model -> Model
 createGold model =
-    let
-        golds =
-            List.concat [ [ findNearestGridCenter mousePosition ], model.golds ]
+    case model.mouse.buttonDown of
+        NoMouseButton ->
+            case List.head model.drawing of
+                Just _ ->
+                    case List.head model.snappedDrawingPoints of
+                        Just _ ->
+                            model
 
-        mousePosition =
-            model.mouse.position |> positionFromCoordinate
-    in
-    { model | golds = golds }
+                        Nothing ->
+                            let
+                                golds =
+                                    List.concat [ [ findNearestGridCenter mousePosition ], model.golds ]
+
+                                mousePosition =
+                                    model.mouse.position |> positionFromCoordinate
+                            in
+                            { model | golds = golds }
+
+                Nothing ->
+                    model
+
+        _ ->
+            model
 
 
 
