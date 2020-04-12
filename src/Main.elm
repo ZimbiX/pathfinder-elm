@@ -224,6 +224,7 @@ update msg model =
             ( { model | mouse = mouse }
                 |> updateDrawing
                 |> createGold
+                |> deleteGold
                 |> finishDrawing
             , Cmd.none
             )
@@ -724,6 +725,38 @@ createGold model =
         model
 
 
+deleteGold : Model -> Model
+deleteGold model =
+    case model.mouse.buttonDown of
+        RightMouseButton ->
+            let
+                golds =
+                    List.filter (goldIsNotUnderPointer model.mouse) model.golds
+            in
+            { model | golds = golds }
+
+        _ ->
+            model
+
+
+goldIsNotUnderPointer : Mouse -> Position -> Bool
+goldIsNotUnderPointer mouse goldPosition =
+    not (goldIsUnderPointer mouse goldPosition)
+
+
+goldIsUnderPointer : Mouse -> Position -> Bool
+goldIsUnderPointer mouse goldPosition =
+    let
+        magnetDistance =
+            0.3
+
+        mousePosition =
+            mouse.position |> positionFromCoordinate
+    in
+    (mousePosition.row - magnetDistance < goldPosition.row && goldPosition.row < mousePosition.row + magnetDistance)
+        && (mousePosition.column - magnetDistance < goldPosition.column && goldPosition.column < mousePosition.column + magnetDistance)
+
+
 finishedCellTap : Model -> Bool
 finishedCellTap model =
     case model.mouse.buttonDown of
@@ -1136,6 +1169,7 @@ viewArrowButtons =
         , div [] [ text "or use WASD / arrow keys." ]
         , div [] [ text "Draw walls with your mouse/finger." ]
         , div [] [ text "Click/tap to place a gold." ]
+        , div [] [ text "Right-click to remove gold." ]
         , div [] [ text "Press Z to hide all walls." ]
         ]
 
