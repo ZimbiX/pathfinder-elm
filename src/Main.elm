@@ -337,7 +337,10 @@ pathAheadClear : Model -> Bool
 pathAheadClear model =
     case model.currentMove of
         Just currentMove ->
-            if wallExistsBetweenPoints model.walls currentMove.origin currentMove.target then
+            if not (withinBoard model.position) then
+                False
+
+            else if wallExistsBetweenPoints model.walls currentMove.origin currentMove.target then
                 (numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) model.position.column
                     || numberBetween currentMove.origin.column (currentMove.origin.column - 0.4) model.position.column
                 )
