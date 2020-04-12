@@ -1029,7 +1029,7 @@ viewBoardCells =
 
 viewBoardCell position =
     img
-        [ src "/assets/images/grid_cell.png"
+        [ src "/assets/images/grid_cell_hd.png"
         , css
             [ Css.position absolute
             , width (px gridSize.cellWidth)
@@ -1101,7 +1101,7 @@ viewWall wall =
                 [ Css.position absolute
                 , height (px 8)
                 , width (px 32)
-                , left (px ((wall.column |> xFromColumn) - 15 |> roundFloat))
+                , left (px ((wall.column |> xFromColumn) - 16 |> roundFloat))
                 , top (px ((wall.row |> yFromRow) - 4 |> roundFloat))
                 , opacity (Css.num wall.opacity)
                 , transform (rotate (Css.deg 90))
@@ -1118,7 +1118,7 @@ viewWall wall =
                 [ Css.position absolute
                 , width (px 32)
                 , height (px 8)
-                , left (px ((wall.column |> xFromColumn) - 15 |> roundFloat))
+                , left (px ((wall.column |> xFromColumn) - 16 |> roundFloat))
                 , top (px ((wall.row |> yFromRow) - 4 |> roundFloat))
                 , opacity (Css.num wall.opacity)
                 ]
