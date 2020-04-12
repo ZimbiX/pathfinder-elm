@@ -51,6 +51,7 @@ type alias Model =
     , currentMove : CurrentMove
     , clock : Float
     , walls : Walls
+    , golds : Golds
     , mouse : Mouse
     , drawing : Drawing
     , snappedDrawingPoints : SnappedDrawingPoints
@@ -59,6 +60,14 @@ type alias Model =
 
 type alias Walls =
     List Wall
+
+
+type alias Golds =
+    List Position
+
+
+type alias Gold =
+    Position
 
 
 type alias CurrentMove =
@@ -97,6 +106,7 @@ type alias Mouse =
 type MouseButton
     = LeftMouseButton
     | RightMouseButton
+    | MiddleMouseButton
     | NoMouseButton
 
 
@@ -155,6 +165,7 @@ init _ =
             , { hidden = True, opacity = 0, column = 4.5, row = 2, orientation = Vertical }
             , { hidden = True, opacity = 0, column = 4.5, row = 3, orientation = Vertical }
             ]
+      , golds = []
       , mouse =
             { position = { x = 0, y = 0 }
             , buttonDown = NoMouseButton
@@ -492,10 +503,7 @@ updateDrawing model =
                         , [ model.mouse.position ]
                         ]
 
-                RightMouseButton ->
-                    model.drawing
-
-                NoMouseButton ->
+                _ ->
                     model.drawing
 
         snappedDrawingPoints =
@@ -519,10 +527,7 @@ updateDrawing model =
                     else
                         model.snappedDrawingPoints
 
-                RightMouseButton ->
-                    model.snappedDrawingPoints
-
-                NoMouseButton ->
+                _ ->
                     model.snappedDrawingPoints
     in
     { model | drawing = drawing, snappedDrawingPoints = snappedDrawingPoints } |> finishDrawing
@@ -611,7 +616,13 @@ finishDrawing model =
                     { model | drawing = [], snappedDrawingPoints = [], walls = walls }
 
                 Nothing ->
-                    { model | drawing = [], snappedDrawingPoints = [] }
+                    case List.head model.drawing of
+                        Just _ ->
+                            { model | drawing = [], snappedDrawingPoints = [] }
+                                |> createGold
+
+                        Nothing ->
+                            { model | drawing = [], snappedDrawingPoints = [] }
 
         _ ->
             model
@@ -662,6 +673,13 @@ distanceBetweenPoints pointA pointB =
     sqrt (columnDiff * columnDiff + rowDiff * rowDiff)
 
 
+findNearestGridCenter : Position -> Position
+findNearestGridCenter position =
+    { row = position.row |> roundFloat
+    , column = position.column |> roundFloat
+    }
+
+
 findNearestGridIntersection : Position -> Position
 findNearestGridIntersection position =
     { row = position.row |> roundToNearestHalf
@@ -672,6 +690,20 @@ findNearestGridIntersection position =
 roundToNearestHalf : Float -> Float
 roundToNearestHalf n =
     (n + 0.5 |> roundFloat) - 0.5
+
+
+createGold : Model -> Model
+createGold model =
+    let
+        golds =
+            List.concat [ [ findNearestGridCenter mousePosition ], model.golds ]
+
+        mousePosition =
+            { column = model.mouse.position.x |> columnFromX
+            , row = model.mouse.position.y |> rowFromY
+            }
+    in
+    { model | golds = golds }
 
 
 
@@ -724,6 +756,9 @@ mouseButtonDecoder =
 
                     2 ->
                         Json.Decode.succeed RightMouseButton
+
+                    3 ->
+                        Json.Decode.succeed MiddleMouseButton
 
                     _ ->
                         Json.Decode.succeed NoMouseButton
@@ -789,6 +824,7 @@ viewBoard model =
         ]
         [ viewBackground
         , lazy viewPlayer model.position
+        , lazy viewGolds model.golds
         , lazy viewWalls model.walls
         , lazy viewDrawing model.drawing
         , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
@@ -824,6 +860,26 @@ viewPlayer position =
             , height (px 31)
             , left (px ((position.column |> xFromColumn) - (11 / 2) |> roundFloat))
             , top (px ((position.row |> yFromRow) - 31 / 2 + 1 |> roundFloat))
+            ]
+        , draggable "false"
+        , onContextMenuPreventDefault (Tick 0)
+        ]
+        []
+
+
+viewGolds golds =
+    div [] (golds |> List.map viewGold)
+
+
+viewGold gold =
+    img
+        [ src "/assets/images/golden.png"
+        , css
+            [ Css.position absolute
+            , width (px 17)
+            , height (px 17)
+            , left (px ((gold.column |> xFromColumn) - (17 / 2) |> roundFloat))
+            , top (px ((gold.row |> yFromRow) - 17 / 2 + 1 |> roundFloat))
             ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
@@ -988,7 +1044,9 @@ viewArrowButtons =
             , viewArrowButton MoveUp "^"
             , viewArrowButton MoveDown "v"
             ]
-        , div [] [ text "or use WASD / arrow keys" ]
+        , div [] [ text "or use WASD / arrow keys." ]
+        , div [] [ text "Draw walls with your mouse/finger." ]
+        , div [] [ text "Click/tap to place a gold." ]
         ]
 
 

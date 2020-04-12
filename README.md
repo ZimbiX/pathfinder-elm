@@ -65,7 +65,6 @@ $ ./scripts/build
 ### Todo
 
 - Deduplicate walls when finishing drawing
-- Add gold
 - Wall removal
 - Turning all walls invisible
 - Second player
