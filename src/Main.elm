@@ -714,13 +714,21 @@ createGold : Model -> Model
 createGold model =
     if finishedCellTap model then
         let
-            golds =
-                List.concat [ [ findNearestGridCenter mousePosition ], model.golds ]
+            nearestGridCenter =
+                findNearestGridCenter mousePosition
 
             mousePosition =
                 model.mouse.position |> positionFromCoordinate
         in
-        { model | golds = golds }
+        if withinBoard nearestGridCenter then
+            let
+                golds =
+                    List.concat [ [ nearestGridCenter ], model.golds ]
+            in
+            { model | golds = golds }
+
+        else
+            model
 
     else
         model
@@ -836,6 +844,12 @@ positionsAxisRange axis positions =
 
         Nothing ->
             0
+
+
+withinBoard : Position -> Bool
+withinBoard position =
+    numberBetween 0 (gridSize.rowCount - 1) position.row
+        && numberBetween 0 (gridSize.columnCount - 1) position.column
 
 
 
