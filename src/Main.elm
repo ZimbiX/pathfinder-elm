@@ -1096,14 +1096,15 @@ viewWalls walls =
 viewWall wall =
     if wall.orientation == Vertical then
         img
-            [ src "/assets/images/wall_v.png"
+            [ src "/assets/images/wall_h_hd.png"
             , css
                 [ Css.position absolute
-                , width (px 8)
-                , height (px 32)
-                , left (px ((wall.column |> xFromColumn) - 4 |> roundFloat))
-                , top (px ((wall.row |> yFromRow) - 15 |> roundFloat))
+                , height (px 8)
+                , width (px 32)
+                , left (px ((wall.column |> xFromColumn) - 15 |> roundFloat))
+                , top (px ((wall.row |> yFromRow) - 4 |> roundFloat))
                 , opacity (Css.num wall.opacity)
+                , transform (rotate (Css.deg 90))
                 ]
             , draggable "false"
             , onContextMenuPreventDefault (Tick 0)
@@ -1112,12 +1113,12 @@ viewWall wall =
 
     else
         img
-            [ src "/assets/images/wall_h.png"
+            [ src "/assets/images/wall_h_hd.png"
             , css
                 [ Css.position absolute
                 , width (px 32)
                 , height (px 8)
-                , left (px ((wall.column |> xFromColumn) - 16 |> roundFloat))
+                , left (px ((wall.column |> xFromColumn) - 15 |> roundFloat))
                 , top (px ((wall.row |> yFromRow) - 4 |> roundFloat))
                 , opacity (Css.num wall.opacity)
                 ]
