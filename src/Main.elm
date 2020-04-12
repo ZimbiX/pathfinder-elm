@@ -855,8 +855,8 @@ viewBoard model =
         , updateMouseOn "pointermove"
         ]
         [ viewBackground
-        , lazy viewPlayer model.position
         , lazy viewGolds model.golds
+        , lazy viewPlayer model.position
         , lazy viewWalls model.walls
         , lazy viewDrawing model.drawing
         , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
