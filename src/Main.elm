@@ -406,7 +406,7 @@ revealWallIfAtPoint point wall =
 hideAllWallsIfHideButtonPressed : RawKey -> Model -> Model
 hideAllWallsIfHideButtonPressed rawKey model =
     case Keyboard.anyKeyUpper rawKey of
-        Just (Character "X") ->
+        Just (Character "Z") ->
             { model | walls = model.walls |> hideAllWalls }
 
         _ ->
