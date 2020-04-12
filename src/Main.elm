@@ -1075,13 +1075,13 @@ viewGolds golds =
 
 viewGold gold =
     img
-        [ src "/assets/images/golden.png"
+        [ src "/assets/images/golden_hd.png"
         , css
             [ Css.position absolute
             , width (px 17)
             , height (px 17)
             , left (px ((gold.column |> xFromColumn) - (17 / 2) |> roundFloat))
-            , top (px ((gold.row |> yFromRow) - 17 / 2 + 1 |> roundFloat))
+            , top (px ((gold.row |> yFromRow) - 17 / 2 |> roundFloat))
             ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
