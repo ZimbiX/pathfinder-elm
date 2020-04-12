@@ -985,7 +985,7 @@ viewBoard model =
         , updateMouseOn "pointerup"
         , updateMouseOn "pointermove"
         ]
-        [ viewBackground
+        [ viewBackground model.clock
         , viewBoardCells
         , lazy viewGolds model.golds
         , lazy viewPlayer model.position
@@ -995,10 +995,18 @@ viewBoard model =
         ]
 
 
-viewBackground =
+viewBackground clock =
+    let
+        hueShift =
+            fractionalModBy 360 (clock / 60) |> String.fromFloat
+    in
     img
         [ src "/assets/images/bg_full.png"
-        , css [ width (pct 100), height (pct 100) ]
+        , css
+            [ width (pct 100)
+            , height (pct 100)
+            , Css.property "filter" ("hue-rotate(" ++ hueShift ++ "deg)")
+            ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
         ]

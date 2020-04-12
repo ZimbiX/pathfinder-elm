@@ -64,16 +64,18 @@ $ ./scripts/build
 
 ### Todo
 
+- Finishing maze drawing
 - Show traversed path
 - Make wall removal hitbox rectangular, matching orientation
 - Unit tests
 - Hold with a second finger to remove
-- Finishing maze drawing
 - Split out to multiple files
 - Deduplicate walls when finishing drawing
 - Deduplicate golds
 - Drag player to reposition
-- Second player
+- Second player (n players?)
+- Different background colour for each maze within a game
 - Backend to store game state
 - Sync game state with backend
 - Compensate for overshooting the point of collision in `returnToOriginIfPathUnclear`
+- Improve performance
