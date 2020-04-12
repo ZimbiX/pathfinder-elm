@@ -710,29 +710,75 @@ roundToNearestHalf n =
 
 createGold : Model -> Model
 createGold model =
+    if finishedCellTap model then
+        let
+            golds =
+                List.concat [ [ findNearestGridCenter mousePosition ], model.golds ]
+
+            mousePosition =
+                model.mouse.position |> positionFromCoordinate
+        in
+        { model | golds = golds }
+
+    else
+        model
+
+
+finishedCellTap : Model -> Bool
+finishedCellTap model =
     case model.mouse.buttonDown of
         NoMouseButton ->
             case List.head model.drawing of
                 Just _ ->
                     case List.head model.snappedDrawingPoints of
                         Just _ ->
-                            model
+                            False
 
                         Nothing ->
-                            let
-                                golds =
-                                    List.concat [ [ findNearestGridCenter mousePosition ], model.golds ]
-
-                                mousePosition =
-                                    model.mouse.position |> positionFromCoordinate
-                            in
-                            { model | golds = golds }
+                            (model.drawing |> List.map positionFromCoordinate |> tapPositionRange) < 0.4
 
                 Nothing ->
-                    model
+                    False
 
         _ ->
-            model
+            False
+
+
+tapPositionRange : List Position -> Float
+tapPositionRange positions =
+    let
+        rowRange =
+            positions |> positionsAxisRange (\p -> p.row)
+
+        columnRange =
+            positions |> positionsAxisRange (\p -> p.column)
+    in
+    max rowRange columnRange
+
+
+positionsAxisRange : (Position -> Float) -> List Position -> Float
+positionsAxisRange axis positions =
+    let
+        axisValues =
+            positions |> List.map axis
+
+        maybeAxisMin =
+            List.minimum axisValues
+
+        maybeAxisMax =
+            List.maximum axisValues
+    in
+    case maybeAxisMin of
+        Just axisMin ->
+            case maybeAxisMax of
+                Just axisMax ->
+                    axisMax - axisMin
+
+                Nothing ->
+                    0
+
+        Nothing ->
+            0
 
 
 

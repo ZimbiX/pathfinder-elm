@@ -69,6 +69,7 @@ $ ./scripts/build
 - Finishing maze drawing
 - Split out to multiple files
 - Deduplicate walls when finishing drawing
+- Deduplicate golds
 - Second player
 - Backend to store game state
 - Sync game state with backend
