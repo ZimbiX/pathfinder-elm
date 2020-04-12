@@ -64,6 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
+- Show traversed path
 - Make wall removal hitbox rectangular, matching orientation
 - Unit tests
 - Hold with a second finger to remove

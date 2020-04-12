@@ -1199,12 +1199,14 @@ viewDrawingSegment coordA coordB =
     div
         [ css
             [ Css.position absolute
-            , left (px l)
-            , top (px t)
+            , left (px (l - 2))
+            , top (px (t - 2))
             , width (px h)
-            , height (px 3)
+            , height (px 0)
             , backgroundColor (hex "#000")
             , transform (rotate (rad angle))
+            , border3 (px 2) Css.solid (hex "#000")
+            , Css.borderRadius (px 4)
             ]
         ]
         []
