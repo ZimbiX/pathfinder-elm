@@ -545,7 +545,7 @@ updateDrawing model =
                         distanceToNearestGridIntersection =
                             distanceBetweenPoints mousePosition nearestGridIntersection
                     in
-                    if mousePosition.column < gridSize.columnCount && distanceToNearestGridIntersection < 0.4 then
+                    if withinBoard nearestGridIntersection && distanceToNearestGridIntersection < 0.4 then
                         addGridIntersectionToDrawingWithInterpolation model.snappedDrawingPoints nearestGridIntersection
 
                     else
@@ -848,8 +848,8 @@ positionsAxisRange axis positions =
 
 withinBoard : Position -> Bool
 withinBoard position =
-    numberBetween 0 (gridSize.rowCount - 1) position.row
-        && numberBetween 0 (gridSize.columnCount - 1) position.column
+    numberBetween -0.5 (gridSize.rowCount - 0.5) position.row
+        && numberBetween -0.5 (gridSize.columnCount - 0.5) position.column
 
 
 
