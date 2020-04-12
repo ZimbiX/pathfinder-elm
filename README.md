@@ -65,8 +65,11 @@ $ ./scripts/build
 ### Todo
 
 - Wall removal
+- Unit tests
+- Split out to multiple files
 - Deduplicate walls when finishing drawing
 - Turning all walls invisible
 - Second player
 - Backend to store game state
 - Sync game state with backend
+- Compensate for overshooting the point of collision in `returnToOriginIfPathUnclear`

@@ -207,7 +207,10 @@ update msg model =
                     ( tryStartPlayerMove moveDirection model, Cmd.none )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( model
+                        |> hideAllWallsIfHideButtonPressed rawKey
+                    , Cmd.none
+                    )
 
         Tick deltaTime ->
             ( updatePlayerPosition deltaTime model
@@ -306,7 +309,6 @@ returnToOriginIfPathUnclear model =
                     { model | currentMove = Just { currentMove | reversing = True, direction = oppositeDirection currentMove.direction } }
                         |> revealWall
 
-            -- TODO: Compensate for overshooting the point of collision
             Nothing ->
                 model
 
@@ -399,6 +401,26 @@ revealWallIfAtPoint point wall =
 
     else
         wall
+
+
+hideAllWallsIfHideButtonPressed : RawKey -> Model -> Model
+hideAllWallsIfHideButtonPressed rawKey model =
+    case Keyboard.anyKeyUpper rawKey of
+        Just (Character "X") ->
+            { model | walls = model.walls |> hideAllWalls }
+
+        _ ->
+            model
+
+
+hideAllWalls : Walls -> Walls
+hideAllWalls walls =
+    walls |> List.map hideWall
+
+
+hideWall : Wall -> Wall
+hideWall wall =
+    { wall | hidden = True, opacity = 0 }
 
 
 playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position, target : Position, reversing : Bool } -> Bool
@@ -1057,6 +1079,7 @@ viewArrowButtons =
         , div [] [ text "or use WASD / arrow keys." ]
         , div [] [ text "Draw walls with your mouse/finger." ]
         , div [] [ text "Click/tap to place a gold." ]
+        , div [] [ text "Press Z to hide all walls." ]
         ]
 
 
