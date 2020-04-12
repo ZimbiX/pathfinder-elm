@@ -511,9 +511,7 @@ updateDrawing model =
                 LeftMouseButton ->
                     let
                         mousePosition =
-                            { column = model.mouse.position.x |> columnFromX
-                            , row = model.mouse.position.y |> rowFromY
-                            }
+                            model.mouse.position |> positionFromCoordinate
 
                         nearestGridIntersection =
                             findNearestGridIntersection mousePosition
@@ -699,9 +697,7 @@ createGold model =
             List.concat [ [ findNearestGridCenter mousePosition ], model.golds ]
 
         mousePosition =
-            { column = model.mouse.position.x |> columnFromX
-            , row = model.mouse.position.y |> rowFromY
-            }
+            model.mouse.position |> positionFromCoordinate
     in
     { model | golds = golds }
 
@@ -780,6 +776,20 @@ view model =
             ]
             |> toUnstyled
         ]
+    }
+
+
+positionFromCoordinate : Coordinate -> Position
+positionFromCoordinate coords =
+    { column = coords.x |> columnFromX
+    , row = coords.y |> rowFromY
+    }
+
+
+coordsFromPosition : Position -> Coordinate
+coordsFromPosition position =
+    { x = position.column |> xFromColumn
+    , y = position.row |> yFromRow
     }
 
 

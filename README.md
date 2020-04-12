@@ -64,8 +64,8 @@ $ ./scripts/build
 
 ### Todo
 
-- Deduplicate walls when finishing drawing
 - Wall removal
+- Deduplicate walls when finishing drawing
 - Turning all walls invisible
 - Second player
 - Backend to store game state
