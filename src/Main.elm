@@ -225,6 +225,7 @@ update msg model =
                 |> updateDrawing
                 |> createGold
                 |> deleteGold
+                |> deleteWall
                 |> finishDrawing
             , Cmd.none
             )
@@ -731,7 +732,7 @@ deleteGold model =
         RightMouseButton ->
             let
                 golds =
-                    List.filter (goldIsNotUnderPointer model.mouse) model.golds
+                    List.filter (itemIsNotUnderPointer model.mouse) model.golds
             in
             { model | golds = golds }
 
@@ -739,13 +740,36 @@ deleteGold model =
             model
 
 
-goldIsNotUnderPointer : Mouse -> Position -> Bool
-goldIsNotUnderPointer mouse goldPosition =
-    not (goldIsUnderPointer mouse goldPosition)
+deleteWall : Model -> Model
+deleteWall model =
+    case model.mouse.buttonDown of
+        RightMouseButton ->
+            let
+                walls =
+                    List.filter (wallIsNotUnderPointer model.mouse) model.walls
+            in
+            { model | walls = walls }
+
+        _ ->
+            model
 
 
-goldIsUnderPointer : Mouse -> Position -> Bool
-goldIsUnderPointer mouse goldPosition =
+wallIsNotUnderPointer : Mouse -> Wall -> Bool
+wallIsNotUnderPointer mouse wall =
+    let
+        wallPosition =
+            { column = wall.column, row = wall.row }
+    in
+    not (itemIsUnderPointer mouse wallPosition)
+
+
+itemIsNotUnderPointer : Mouse -> Position -> Bool
+itemIsNotUnderPointer mouse itemPosition =
+    not (itemIsUnderPointer mouse itemPosition)
+
+
+itemIsUnderPointer : Mouse -> Position -> Bool
+itemIsUnderPointer mouse itemPosition =
     let
         magnetDistance =
             0.3
@@ -753,8 +777,8 @@ goldIsUnderPointer mouse goldPosition =
         mousePosition =
             mouse.position |> positionFromCoordinate
     in
-    (mousePosition.row - magnetDistance < goldPosition.row && goldPosition.row < mousePosition.row + magnetDistance)
-        && (mousePosition.column - magnetDistance < goldPosition.column && goldPosition.column < mousePosition.column + magnetDistance)
+    (mousePosition.row - magnetDistance < itemPosition.row && itemPosition.row < mousePosition.row + magnetDistance)
+        && (mousePosition.column - magnetDistance < itemPosition.column && itemPosition.column < mousePosition.column + magnetDistance)
 
 
 finishedCellTap : Model -> Bool
@@ -1169,7 +1193,7 @@ viewArrowButtons =
         , div [] [ text "or use WASD / arrow keys." ]
         , div [] [ text "Draw walls with your mouse/finger." ]
         , div [] [ text "Click/tap to place a gold." ]
-        , div [] [ text "Right-click to remove gold." ]
+        , div [] [ text "Hold the right mouse button to remove." ]
         , div [] [ text "Press Z to hide all walls." ]
         ]
 

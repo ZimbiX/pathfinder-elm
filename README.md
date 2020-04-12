@@ -64,12 +64,14 @@ $ ./scripts/build
 
 ### Todo
 
-- Wall removal
+- Make wall removal hitbox rectangular, matching orientation
 - Unit tests
+- Hold with a second finger to remove
 - Finishing maze drawing
 - Split out to multiple files
 - Deduplicate walls when finishing drawing
 - Deduplicate golds
+- Drag player to reposition
 - Second player
 - Backend to store game state
 - Sync game state with backend
