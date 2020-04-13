@@ -74,6 +74,7 @@ type alias Model =
     , snappedDrawingPoints : SnappedDrawingPoints
     , stage : Stage
     , pathTravelled : PathTravelled
+    , popup : Maybe Popup
     }
 
 
@@ -148,6 +149,11 @@ type alias Coordinate =
 type Stage
     = DrawingStage
     | PlayingStage
+    | FirstWinStage
+
+
+type alias Popup =
+    { messageLines : List String }
 
 
 init : () -> ( Model, Cmd Msg )
@@ -164,6 +170,7 @@ init _ =
       , snappedDrawingPoints = []
       , stage = DrawingStage
       , pathTravelled = []
+      , popup = Nothing
       }
     , Cmd.none
     )
@@ -179,6 +186,7 @@ type Msg
     | KeyDown RawKey
     | MouseUpdated Mouse
     | DoneButtonPressed
+    | DismissPopup
 
 
 type MoveDirection
@@ -210,6 +218,7 @@ update msg model =
                 |> updatePlayerPosition deltaTime
                 |> returnToOriginIfPathUnclear
                 |> finishPlayerMove
+                |> endGameIfWon
                 |> updateWallsOpacity deltaTime
             , Cmd.none
             )
@@ -228,6 +237,11 @@ update msg model =
             , Cmd.none
             )
 
+        DismissPopup ->
+            ( { model | popup = Nothing }
+            , Cmd.none
+            )
+
 
 mouseProcessorForStageInteractions : Stage -> (Model -> Model)
 mouseProcessorForStageInteractions stage =
@@ -241,6 +255,9 @@ mouseProcessorForStageInteractions stage =
 
         PlayingStage ->
             tryStartPlayerMoveFromSwipe
+
+        FirstWinStage ->
+            \x -> x
 
 
 updateMouseFromUnscaled : Mouse -> Model -> Model
@@ -374,6 +391,9 @@ tryStartPlayerMove moveDirection model =
                     startPlayerMove moveDirection model
 
                 DrawingStage ->
+                    model
+
+                FirstWinStage ->
                     model
 
 
@@ -973,7 +993,39 @@ withinBoard position =
 
 completeMazeDrawing : Model -> Model
 completeMazeDrawing model =
-    { model | stage = PlayingStage, walls = model.walls |> hideAllWalls, pathTravelled = [ model.position ] }
+    case model.stage of
+        DrawingStage ->
+            { model | stage = PlayingStage, walls = model.walls |> hideAllWalls, pathTravelled = [ model.position ] }
+
+        PlayingStage ->
+            model
+
+        FirstWinStage ->
+            model
+
+
+endGameIfWon : Model -> Model
+endGameIfWon model =
+    let
+        winPopup =
+            Just { messageLines = [ "You win! :D" ] }
+    in
+    case model.stage of
+        DrawingStage ->
+            model
+
+        PlayingStage ->
+            if
+                (model.currentMove == Nothing)
+                    && (model.golds |> List.any (\gold -> gold == model.position))
+            then
+                { model | stage = FirstWinStage, popup = winPopup }
+
+            else
+                model
+
+        FirstWinStage ->
+            model
 
 
 
@@ -1150,6 +1202,9 @@ viewBoard model =
 
                 PlayingStage ->
                     []
+
+                FirstWinStage ->
+                    []
     in
     div
         (List.concat
@@ -1173,6 +1228,7 @@ viewBoard model =
               , lazy viewWalls model.walls
               ]
             , viewDrawingStage
+            , [ viewPopup model.popup ]
             ]
         )
 
@@ -1496,6 +1552,34 @@ viewSnappedDrawingPoint snappedDrawingPoint =
         []
 
 
+viewPopup maybePopup =
+    case maybePopup of
+        Just popup ->
+            div
+                [ css
+                    [ Css.position absolute
+                    , width (px 300)
+                    , height (px 160)
+                    , left (px 168)
+                    , top (px 150)
+                    , backgroundColor (hex "#01b5b5")
+                    , Css.border3 (px 2) Css.solid (hex "#000")
+                    , Css.textAlign Css.center
+                    , Css.displayFlex
+                    , Css.flexDirection Css.column
+                    , Css.justifyContent Css.center
+                    , Css.boxShadow4 (px 0) (px 0) (px 39) (hex "#000")
+                    , Css.opacity (Css.num 0.8)
+                    ]
+                ]
+                [ div [] (popup.messageLines |> List.map (\messageLine -> div [] [ text messageLine ]))
+                , viewPopupDismissButton "Close"
+                ]
+
+        Nothing ->
+            div [] []
+
+
 viewButtons stage =
     case stage of
         DrawingStage ->
@@ -1519,6 +1603,25 @@ viewButtons stage =
                     ]
                 , div [] [ text "Swipe to move, or use the buttons / WASD / arrow keys." ]
                 ]
+
+        FirstWinStage ->
+            div [] []
+
+
+viewPopupDismissButton : String -> Html.Styled.Html Msg
+viewPopupDismissButton buttonText =
+    button
+        [ css
+            [ width (px 120)
+            , height (px 50)
+            , Css.margin2 (px 0) Css.auto
+            , Css.marginTop (px 15)
+            , Css.fontSize (px 30)
+            , fontFamily
+            ]
+        , onClick DismissPopup
+        ]
+        [ text buttonText ]
 
 
 viewArrowButton moveDirection buttonText =
