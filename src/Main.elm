@@ -431,7 +431,7 @@ returnToOriginIfPathUnclear model =
 
                 else
                     { model | currentMove = Just { currentMove | reversing = True, direction = oppositeDirection currentMove.direction } }
-                        |> revealWall
+                        |> revealHitWall
 
             Nothing ->
                 model
@@ -504,8 +504,8 @@ wallIsAtPoint point wall =
     wall.column == point.column && wall.row == point.row
 
 
-revealWall : Model -> Model
-revealWall model =
+revealHitWall : Model -> Model
+revealHitWall model =
     case model.currentMove of
         Just currentMove ->
             let
@@ -548,6 +548,16 @@ hideAllWalls walls =
 hideWall : Wall -> Wall
 hideWall wall =
     { wall | hidden = True, opacity = 0 }
+
+
+revealAllWalls : Walls -> Walls
+revealAllWalls walls =
+    walls |> List.map revealWall
+
+
+revealWall : Wall -> Wall
+revealWall wall =
+    { wall | hidden = False, opacity = 1 }
 
 
 playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position, target : Position, reversing : Bool } -> Bool
@@ -1019,7 +1029,7 @@ endGameIfWon model =
                 (model.currentMove == Nothing)
                     && (model.golds |> List.any (\gold -> gold == model.position))
             then
-                { model | stage = FirstWinStage, popup = winPopup }
+                { model | stage = FirstWinStage, popup = winPopup, walls = model.walls |> revealAllWalls }
 
             else
                 model

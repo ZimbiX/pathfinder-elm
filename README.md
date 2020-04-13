@@ -64,7 +64,6 @@ $ ./scripts/build
 
 ### Todo
 
-- Reveal all walls upon winning
 - Count moves and wall hits and show this in the winning message
 - Prevent touchscreen button lag
 - Verify maze is possible to win before leaving drawing stage
