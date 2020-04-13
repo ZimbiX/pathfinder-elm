@@ -69,6 +69,7 @@ type alias Model =
     , mouse : Mouse
     , drawing : Drawing
     , snappedDrawingPoints : SnappedDrawingPoints
+    , stage : Stage
     }
 
 
@@ -136,6 +137,11 @@ type alias Coordinate =
     { x : Float, y : Float }
 
 
+type Stage
+    = DrawingStage
+    | PlayingStage
+
+
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { position =
@@ -171,6 +177,7 @@ init _ =
             }
       , drawing = []
       , snappedDrawingPoints = []
+      , stage = DrawingStage
       }
     , Cmd.none
     )
@@ -185,6 +192,7 @@ type Msg
     | MoveButtonPressed MoveDirection
     | KeyDown RawKey
     | MouseUpdated Mouse
+    | DoneButtonPressed
 
 
 type MoveDirection
@@ -226,6 +234,11 @@ update msg model =
                 |> deleteGold
                 |> deleteWall
                 |> finishDrawing
+            , Cmd.none
+            )
+
+        DoneButtonPressed ->
+            ( completeMazeDrawing model
             , Cmd.none
             )
 
@@ -850,6 +863,11 @@ withinBoard position =
         && numberBetween -0.5 (gridSize.columnCount - 0.5) position.column
 
 
+completeMazeDrawing : Model -> Model
+completeMazeDrawing model =
+    { model | stage = PlayingStage }
+
+
 
 -- SUBSCRIPTIONS
 
@@ -944,7 +962,7 @@ view model =
     , body =
         [ div []
             [ lazy viewBoard model
-            , viewButtons
+            , lazy viewButtons model.stage
             , viewGithubLink
             ]
             |> toUnstyled
@@ -999,12 +1017,29 @@ roundFloat =
 
 
 viewBoard model =
+    let
+        playEvents =
+            case model.stage of
+                DrawingStage ->
+                    [ updateMouseOn "pointerdown"
+                    , updateMouseOn "pointerup"
+                    , updateMouseOn "pointermove"
+                    ]
+
+                PlayingStage ->
+                    []
+    in
     div
-        [ css [ width (px 640), height (px 480), Css.touchAction Css.none ]
-        , updateMouseOn "pointerdown"
-        , updateMouseOn "pointerup"
-        , updateMouseOn "pointermove"
-        ]
+        (List.concat
+            [ [ css
+                    [ width (px 640)
+                    , height (px 480)
+                    , Css.touchAction Css.none
+                    ]
+              ]
+            , playEvents
+            ]
+        )
         [ viewBackground
         , viewBoardCells
         , lazy viewGolds model.golds
@@ -1270,20 +1305,29 @@ viewSnappedDrawingPoint snappedDrawingPoint =
         []
 
 
-viewButtons =
-    div []
-        [ div []
-            [ viewArrowButton MoveLeft "<"
-            , viewArrowButton MoveRight ">"
-            , viewArrowButton MoveUp "^"
-            , viewArrowButton MoveDown "v"
-            ]
-        , div [] [ text "or use WASD / arrow keys." ]
-        , div [] [ text "Draw walls with your mouse/finger." ]
-        , div [] [ text "Click/tap to place a gold." ]
-        , div [] [ text "Hold the right mouse button to remove." ]
-        , div [] [ text "Press Z to hide all walls." ]
-        ]
+viewButtons stage =
+    case stage of
+        DrawingStage ->
+            div []
+                [ div [ css [ Css.displayFlex ] ]
+                    [ viewDoneButton
+                    ]
+                , div [] [ text "Draw walls with your mouse/finger." ]
+                , div [] [ text "Click/tap to place a gold." ]
+                , div [] [ text "Hold the right mouse button to remove." ]
+                , div [] [ text "Press Done when finished drawing." ]
+                ]
+
+        PlayingStage ->
+            div []
+                [ div [ css [ Css.displayFlex ] ]
+                    [ viewArrowButton MoveLeft "<"
+                    , viewArrowButton MoveRight ">"
+                    , viewArrowButton MoveUp "^"
+                    , viewArrowButton MoveDown "v"
+                    ]
+                , div [] [ text "or use WASD / arrow keys." ]
+                ]
 
 
 viewArrowButton moveDirection buttonText =
@@ -1296,6 +1340,18 @@ viewArrowButton moveDirection buttonText =
         , onClick (MoveButtonPressed moveDirection)
         ]
         [ text buttonText ]
+
+
+viewDoneButton =
+    button
+        [ css
+            [ width (px 80)
+            , height (px 50)
+            , fontSize (px 20)
+            ]
+        , onClick DoneButtonPressed
+        ]
+        [ text "Done" ]
 
 
 viewGithubLink =
