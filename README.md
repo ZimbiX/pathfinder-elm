@@ -64,6 +64,10 @@ $ ./scripts/build
 
 ### Todo
 
+- Add winning message
+- Reveal all walls upon winning
+- Count moves and wall hits and show this in the winning message
+- Prevent touchscreen button lag
 - Verify maze is possible to win before leaving drawing stage
 - Make wall removal hitbox rectangular, matching orientation
 - Unit tests

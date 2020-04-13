@@ -3,7 +3,7 @@ module Main exposing (Model, Msg(..), init, main, update, view)
 import Basics.Extra exposing (fractionalModBy)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
-import Css exposing (absolute, backgroundColor, border3, fontSize, height, hex, left, opacity, pct, px, rad, rotate, solid, top, transform, width)
+import Css exposing (absolute, backgroundColor, border3, height, hex, left, opacity, pct, px, rad, rotate, solid, top, transform, width)
 import Css.Animations
 import Debug
 import Html exposing (Html)
@@ -1066,7 +1066,7 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "PathFinder"
     , body =
-        [ div []
+        [ div [ css [ fontFamily, fontSize ] ]
             [ lazy viewBoard model
             , lazy viewButtons model.stage
             , viewGithubLink
@@ -1074,6 +1074,14 @@ view model =
             |> toUnstyled
         ]
     }
+
+
+fontFamily =
+    Css.fontFamilies [ "Roboto", "Arial", "Helvetica", "sans-serif" ]
+
+
+fontSize =
+    Css.fontSize (px 30)
 
 
 positionFromCoordinate : Coordinate -> Position
@@ -1508,9 +1516,11 @@ viewButtons stage =
 viewArrowButton moveDirection buttonText =
     button
         [ css
-            [ width (px 50)
-            , height (px 50)
-            , fontSize (px 30)
+            [ width (px 100)
+            , height (px 100)
+            , Css.fontSize (px 80)
+            , Css.marginRight (px 50)
+            , fontFamily
             ]
         , onClick (MoveButtonPressed moveDirection)
         ]
@@ -1520,9 +1530,10 @@ viewArrowButton moveDirection buttonText =
 viewDoneButton =
     button
         [ css
-            [ width (px 80)
-            , height (px 50)
-            , fontSize (px 20)
+            [ width (px 160)
+            , height (px 100)
+            , Css.fontSize (px 50)
+            , fontFamily
             ]
         , onClick DoneButtonPressed
         ]
