@@ -69,6 +69,7 @@ $ ./scripts/build
 - Count moves and wall hits and show this in the winning message
 - Prevent touchscreen button lag
 - Verify maze is possible to win before leaving drawing stage
+- Allow changing grid size
 - Make wall removal hitbox rectangular, matching orientation
 - Unit tests
 - Switch from `List.concat` to `(::)` operator

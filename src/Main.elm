@@ -28,12 +28,8 @@ settings =
     { playerMoveSpeed = 0.007
     , wallOpacitySpeed = 0.008
     , boardZoom = 2
-    }
-
-
-gridBorder =
-    { top = 64
-    , left = 144
+    , boardWidth = 640
+    , boardHeight = 480
     }
 
 
@@ -42,6 +38,12 @@ gridSize =
     , columnCount = 11
     , cellWidth = 32
     , cellHeight = 32
+    }
+
+
+gridBorder =
+    { top = (settings.boardHeight - (gridSize.rowCount * gridSize.cellHeight)) / 2
+    , left = (settings.boardWidth - (gridSize.columnCount * gridSize.cellWidth)) / 2
     }
 
 
@@ -1066,8 +1068,9 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "PathFinder"
     , body =
-        [ div [ css [ fontFamily, fontSize ] ]
-            [ lazy viewBoard model
+        [ div [ css [ fontFamily, fontSize, Css.width (Css.pct 100), Css.height (Css.pct 100) ] ]
+            [ viewBackground
+            , lazy viewBoard model
             , lazy viewButtons model.stage
             , viewGithubLink
             ]
@@ -1151,18 +1154,19 @@ viewBoard model =
     div
         (List.concat
             [ [ css
-                    [ width (px 640)
-                    , height (px 480)
+                    [ width (px settings.boardWidth)
+                    , height (px settings.boardHeight)
                     , Css.touchAction Css.none
                     , Css.property "zoom" ((settings.boardZoom * 100 |> String.fromFloat) ++ "%")
+
+                    --, Css.border3 (px 1) Css.solid (hex "#f00")
                     ]
               ]
             , mouseEvents
             ]
         )
         (List.concat
-            [ [ viewBackground
-              , viewBoardCells
+            [ [ viewBoardCells
               , viewPathTravelled model.pathTravelled
               , lazy viewGolds model.golds
               , lazy viewPlayer model.position
@@ -1177,7 +1181,11 @@ viewBackground =
     div
         [ css
             [ width (pct 100)
-            , height (pct 100)
+            , height (px 1400)
+            , Css.position absolute
+            , Css.top (px 0)
+            , Css.left (px 0)
+            , Css.zIndex (Css.int -9999)
             , Css.backgroundImage
                 (Css.linearGradient2
                     (Css.deg 37)
@@ -1509,7 +1517,7 @@ viewButtons stage =
                     , viewArrowButton MoveUp "^"
                     , viewArrowButton MoveDown "v"
                     ]
-                , div [] [ text "or use WASD / arrow keys." ]
+                , div [] [ text "Swipe to move, or use the buttons / WASD / arrow keys." ]
                 ]
 
 
