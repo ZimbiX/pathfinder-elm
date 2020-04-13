@@ -64,7 +64,6 @@ main =
 type alias Model =
     { position : Position
     , currentMove : CurrentMove
-    , clock : Float
     , walls : Walls
     , golds : Golds
     , mouse : Mouse
@@ -144,7 +143,6 @@ init _ =
             , row = 0
             }
       , currentMove = Nothing
-      , clock = 0
       , walls =
             [ { hidden = True, opacity = 0, column = 0, row = -0.5, orientation = Horizontal }
             , { hidden = True, opacity = 0, column = 1, row = -0.5, orientation = Horizontal }
@@ -234,10 +232,6 @@ update msg model =
 
 updatePlayerPosition : Float -> Model -> Model
 updatePlayerPosition deltaTime model =
-    let
-        clock =
-            model.clock + deltaTime
-    in
     case model.currentMove of
         Just currentMove ->
             let
@@ -266,10 +260,10 @@ updatePlayerPosition deltaTime model =
                         _ ->
                             model.position.row
             in
-            { model | clock = clock, position = Position column row }
+            { model | position = Position column row }
 
         Nothing ->
-            { model | clock = clock }
+            model
 
 
 tryStartPlayerMove : MoveDirection -> Model -> Model
@@ -862,10 +856,35 @@ withinBoard position =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
+    let
+        animationActive =
+            (model.currentMove /= Nothing)
+                || wallsAreAnimating model.walls
+
+        animationSubscription =
+            if animationActive then
+                [ onAnimationFrameDelta Tick ]
+
+            else
+                []
+    in
     Sub.batch
-        [ Keyboard.downs KeyDown
-        , onAnimationFrameDelta Tick
-        ]
+        (List.concat
+            [ [ Keyboard.downs KeyDown ]
+            , animationSubscription
+            ]
+        )
+
+
+wallsAreAnimating : List Wall -> Bool
+wallsAreAnimating walls =
+    List.any wallIsAnimating walls
+
+
+wallIsAnimating : Wall -> Bool
+wallIsAnimating wall =
+    (wall.hidden == True && not (wall.opacity == 0))
+        || (wall.hidden == False && not (wall.opacity == 1))
 
 
 updateMouseOn : String -> Html.Styled.Attribute Msg
@@ -924,7 +943,7 @@ view model =
     { title = "PathFinder"
     , body =
         [ div []
-            [ viewBoard model
+            [ lazy viewBoard model
             , viewButtons
             , viewGithubLink
             ]

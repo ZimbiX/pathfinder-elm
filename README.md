@@ -78,4 +78,3 @@ $ ./scripts/build
 - Backend to store game state
 - Sync game state with backend
 - Compensate for overshooting the point of collision in `returnToOriginIfPathUnclear`
-- Improve performance
