@@ -4,6 +4,7 @@ import Basics.Extra exposing (fractionalModBy)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
 import Css exposing (absolute, backgroundColor, border3, fontSize, height, hex, left, opacity, pct, px, rad, rotate, solid, top, transform, width)
+import Css.Animations
 import Debug
 import Html exposing (Html)
 import Html.Events.Extra
@@ -924,7 +925,7 @@ view model =
     , body =
         [ div []
             [ viewBoard model
-            , viewArrowButtons
+            , viewButtons
             , viewGithubLink
             ]
             |> toUnstyled
@@ -985,7 +986,7 @@ viewBoard model =
         , updateMouseOn "pointerup"
         , updateMouseOn "pointermove"
         ]
-        [ viewBackground model.clock
+        [ viewBackground
         , viewBoardCells
         , lazy viewGolds model.golds
         , lazy viewPlayer model.position
@@ -995,17 +996,26 @@ viewBoard model =
         ]
 
 
-viewBackground clock =
-    let
-        hueShift =
-            fractionalModBy 360 (clock / 60) |> String.fromFloat
-    in
-    img
-        [ src "/assets/images/bg_full.png"
-        , css
+viewBackground =
+    div
+        [ css
             [ width (pct 100)
             , height (pct 100)
-            , Css.property "filter" ("hue-rotate(" ++ hueShift ++ "deg)")
+            , Css.backgroundImage
+                (Css.linearGradient2
+                    (Css.deg 37)
+                    (Css.stop2 (hex "287fc4") (Css.pct 0))
+                    (Css.stop2 (hex "6dff66") (Css.pct 100))
+                    []
+                )
+            , Css.animationName
+                (Css.Animations.keyframes
+                    [ ( 0, [ Css.Animations.custom "filter" "hue-rotate(0)" ] )
+                    , ( 100, [ Css.Animations.custom "filter" "hue-rotate(360deg)" ] )
+                    ]
+                )
+            , Css.animationDuration (Css.sec 40)
+            , Css.property "animation-iteration-count" "infinite"
             ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
@@ -1241,7 +1251,7 @@ viewSnappedDrawingPoint snappedDrawingPoint =
         []
 
 
-viewArrowButtons =
+viewButtons =
     div []
         [ div []
             [ viewArrowButton MoveLeft "<"
