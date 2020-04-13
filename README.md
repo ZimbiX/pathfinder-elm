@@ -64,7 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
-- Finishing maze drawing
+- Verify maze is possible to win before leaving drawing stage
 - Show traversed path
 - Make wall removal hitbox rectangular, matching orientation
 - Unit tests

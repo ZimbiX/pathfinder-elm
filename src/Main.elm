@@ -215,7 +215,7 @@ update msg model =
 
                 Nothing ->
                     ( model
-                        |> hideAllWallsIfHideButtonPressed rawKey
+                      --|> hideAllWallsIfHideButtonPressed rawKey
                     , Cmd.none
                     )
 
@@ -286,7 +286,12 @@ tryStartPlayerMove moveDirection model =
             model
 
         Nothing ->
-            startPlayerMove moveDirection model
+            case model.stage of
+                PlayingStage ->
+                    startPlayerMove moveDirection model
+
+                DrawingStage ->
+                    model
 
 
 finishPlayerMove : Model -> Model
@@ -418,14 +423,14 @@ revealWallIfAtPoint point wall =
         wall
 
 
-hideAllWallsIfHideButtonPressed : RawKey -> Model -> Model
-hideAllWallsIfHideButtonPressed rawKey model =
-    case Keyboard.anyKeyUpper rawKey of
-        Just (Character "Z") ->
-            { model | walls = model.walls |> hideAllWalls }
 
-        _ ->
-            model
+--hideAllWallsIfHideButtonPressed : RawKey -> Model -> Model
+--hideAllWallsIfHideButtonPressed rawKey model =
+--    case Keyboard.anyKeyUpper rawKey of
+--        Just (Character "Z") ->
+--            { model | walls = model.walls |> hideAllWalls }
+--        _ ->
+--            model
 
 
 hideAllWalls : Walls -> Walls
@@ -865,7 +870,7 @@ withinBoard position =
 
 completeMazeDrawing : Model -> Model
 completeMazeDrawing model =
-    { model | stage = PlayingStage }
+    { model | stage = PlayingStage, walls = model.walls |> hideAllWalls }
 
 
 
