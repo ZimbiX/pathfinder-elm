@@ -72,8 +72,8 @@ $ ./scripts/build
 - Make wall removal hitbox rectangular, matching orientation
 - Unit tests
 - Switch from `List.concat` to `(::)` operator
-- Prevent line drawing craziness on multitouch
-- Automatically resize to fit viewport
+- Prevent line drawing craziness on multitouch - check pointer ID is 1?
+- Automatically resize to fit viewport - probably requires using a custom HTML page template
 - Hold with a second finger to remove
 - Split out to multiple files
 - Deduplicate walls when finishing drawing

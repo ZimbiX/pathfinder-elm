@@ -210,6 +210,7 @@ update msg model =
                 Nothing ->
                     ( model
                         |> completeMazeDrawingIfEnterPressed rawKey
+                        |> dismissPopupIfEnterPressed rawKey
                     , Cmd.none
                     )
 
@@ -535,6 +536,16 @@ completeMazeDrawingIfEnterPressed rawKey model =
     case Keyboard.anyKeyUpper rawKey of
         Just Enter ->
             model |> completeMazeDrawing
+
+        _ ->
+            model
+
+
+dismissPopupIfEnterPressed : RawKey -> Model -> Model
+dismissPopupIfEnterPressed rawKey model =
+    case Keyboard.anyKeyUpper rawKey of
+        Just Enter ->
+            { model | popup = Nothing }
 
         _ ->
             model
