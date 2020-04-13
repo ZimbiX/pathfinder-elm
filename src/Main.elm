@@ -150,32 +150,9 @@ type Stage
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { position =
-            { column = 0
-            , row = 0
-            }
+    ( { position = { column = 0, row = 0 }
       , currentMove = Nothing
-      , walls =
-            [ { hidden = True, opacity = 0, column = 0, row = -0.5, orientation = Horizontal }
-            , { hidden = True, opacity = 0, column = 1, row = -0.5, orientation = Horizontal }
-            , { hidden = True, opacity = 0, column = 2, row = -0.5, orientation = Horizontal }
-            , { hidden = True, opacity = 0, column = 3, row = -0.5, orientation = Horizontal }
-            , { hidden = True, opacity = 0, column = 4, row = -0.5, orientation = Horizontal }
-            , { hidden = True, opacity = 0, column = 0, row = 4.5, orientation = Horizontal }
-            , { hidden = True, opacity = 0, column = 1, row = 4.5, orientation = Horizontal }
-            , { hidden = True, opacity = 0, column = 2, row = 4.5, orientation = Horizontal }
-            , { hidden = True, opacity = 0, column = 3, row = 4.5, orientation = Horizontal }
-            , { hidden = True, opacity = 0, column = 4, row = 4.5, orientation = Horizontal }
-            , { hidden = True, opacity = 0, column = -0.5, row = 0, orientation = Vertical }
-            , { hidden = True, opacity = 0, column = -0.5, row = 1, orientation = Vertical }
-            , { hidden = True, opacity = 0, column = -0.5, row = 2, orientation = Vertical }
-            , { hidden = True, opacity = 0, column = -0.5, row = 3, orientation = Vertical }
-            , { hidden = True, opacity = 0, column = -0.5, row = 4, orientation = Vertical }
-            , { hidden = True, opacity = 0, column = 4.5, row = 0, orientation = Vertical }
-            , { hidden = True, opacity = 0, column = 4.5, row = 1, orientation = Vertical }
-            , { hidden = True, opacity = 0, column = 4.5, row = 2, orientation = Vertical }
-            , { hidden = True, opacity = 0, column = 4.5, row = 3, orientation = Vertical }
-            ]
+      , walls = []
       , golds = []
       , mouse =
             { position = { x = 0, y = 0 }
