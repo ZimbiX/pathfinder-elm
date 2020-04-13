@@ -238,7 +238,7 @@ mouseProcessorForStageInteractions stage =
                 >> createWallsFromFinishedDrawing
 
         PlayingStage ->
-            \x -> x
+            tryStartPlayerMoveFromSwipe
 
 
 updateMouseFromUnscaled : Mouse -> Model -> Model
@@ -287,6 +287,77 @@ updatePlayerPosition deltaTime model =
 
         Nothing ->
             model
+
+
+tryStartPlayerMoveFromSwipe : Model -> Model
+tryStartPlayerMoveFromSwipe model =
+    case model.mouse.buttonDown of
+        NoMouseButton ->
+            let
+                maybeSwipeDirection =
+                    model.drawing |> List.map positionFromCoordinate |> getSwipeDirection
+            in
+            case maybeSwipeDirection of
+                Just swipeDirection ->
+                    model |> tryStartPlayerMove swipeDirection
+
+                Nothing ->
+                    model
+
+        _ ->
+            model
+
+
+getSwipeDirection : List Position -> Maybe MoveDirection
+getSwipeDirection drawingPositions =
+    case List.head drawingPositions of
+        Just start ->
+            case List.Extra.last drawingPositions of
+                Just finish ->
+                    if distanceBetweenPoints start finish > 1 then
+                        let
+                            angle =
+                                degreesFromRadians
+                                    (atan2
+                                        (finish.row - start.row)
+                                        (finish.column - start.column)
+                                    )
+                                    |> Debug.log "angle"
+
+                            angleMagnet =
+                                30
+
+                            angleIsNear =
+                                \angleToBeNear -> numberBetween (angleToBeNear - angleMagnet) (angleToBeNear + angleMagnet) angle
+                        in
+                        if angleIsNear 0 || angleIsNear 360 then
+                            Just MoveRight
+
+                        else if angleIsNear 90 then
+                            Just MoveDown
+
+                        else if angleIsNear 180 then
+                            Just MoveLeft
+
+                        else if angleIsNear 270 then
+                            Just MoveUp
+
+                        else
+                            Nothing
+
+                    else
+                        Nothing
+
+                Nothing ->
+                    Nothing
+
+        Nothing ->
+            Nothing
+
+
+degreesFromRadians : Float -> Float
+degreesFromRadians angleRadians =
+    fractionalModBy 360 (360 + (angleRadians |> Debug.log "radians") * (180 / pi))
 
 
 tryStartPlayerMove : MoveDirection -> Model -> Model

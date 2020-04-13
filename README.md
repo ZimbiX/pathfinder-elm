@@ -64,7 +64,6 @@ $ ./scripts/build
 
 ### Todo
 
-- Moving player by swiping
 - Verify maze is possible to win before leaving drawing stage
 - Make wall removal hitbox rectangular, matching orientation
 - Unit tests
