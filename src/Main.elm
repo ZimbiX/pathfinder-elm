@@ -1110,7 +1110,16 @@ viewBackground =
 
 
 viewBoardCells =
-    div []
+    div
+        [ css
+            [ Css.position absolute
+            , width (px (gridSize.cellWidth * gridSize.columnCount))
+            , height (px (gridSize.cellHeight * gridSize.rowCount))
+            , left (px gridBorder.left)
+            , top (px gridBorder.top)
+            , Css.boxShadow4 (px 0) (px 0) (px 10) (hex "#000")
+            ]
+        ]
         (List.concatMap
             (\column ->
                 List.map
@@ -1130,8 +1139,8 @@ viewBoardCell position =
             [ Css.position absolute
             , width (px gridSize.cellWidth)
             , height (px gridSize.cellHeight)
-            , left (px (gridSize.cellWidth * position.column + gridBorder.left))
-            , top (px (gridSize.cellHeight * position.row + gridBorder.top))
+            , left (px (gridSize.cellWidth * position.column))
+            , top (px (gridSize.cellHeight * position.row))
             ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
