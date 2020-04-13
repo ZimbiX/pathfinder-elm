@@ -64,14 +64,16 @@ $ ./scripts/build
 
 ### Todo
 
+- Add box shadow to grid
 - Verify maze is possible to win before leaving drawing stage
-- Show traversed path
 - Make wall removal hitbox rectangular, matching orientation
 - Unit tests
+- Switch from `List.concat` to `(::)` operator
 - Hold with a second finger to remove
 - Split out to multiple files
 - Deduplicate walls when finishing drawing
 - Deduplicate golds
+- Deduplicate path travelled
 - Drag player to reposition
 - Second player (n players?)
 - Different background colour for each maze within a game

@@ -70,6 +70,7 @@ type alias Model =
     , drawing : Drawing
     , snappedDrawingPoints : SnappedDrawingPoints
     , stage : Stage
+    , pathTravelled : PathTravelled
     }
 
 
@@ -133,6 +134,10 @@ type alias SnappedDrawingPoints =
     List Position
 
 
+type alias PathTravelled =
+    List Position
+
+
 type alias Coordinate =
     { x : Float, y : Float }
 
@@ -178,6 +183,7 @@ init _ =
       , drawing = []
       , snappedDrawingPoints = []
       , stage = DrawingStage
+      , pathTravelled = []
       }
     , Cmd.none
     )
@@ -305,7 +311,11 @@ finishPlayerMove model =
                 { model | position = currentMove.origin, currentMove = Nothing }
 
             else
-                { model | position = currentMove.target, currentMove = Nothing }
+                let
+                    pathTravelled =
+                        List.concat [ [ currentMove.target ], model.pathTravelled ]
+                in
+                { model | position = currentMove.target, currentMove = Nothing, pathTravelled = pathTravelled }
 
         Nothing ->
             model
@@ -870,7 +880,7 @@ withinBoard position =
 
 completeMazeDrawing : Model -> Model
 completeMazeDrawing model =
-    { model | stage = PlayingStage, walls = model.walls |> hideAllWalls }
+    { model | stage = PlayingStage, walls = model.walls |> hideAllWalls, pathTravelled = [ model.position ] }
 
 
 
@@ -1047,6 +1057,7 @@ viewBoard model =
         )
         [ viewBackground
         , viewBoardCells
+        , viewPathTravelled model.pathTravelled
         , lazy viewGolds model.golds
         , lazy viewPlayer model.position
         , lazy viewWalls model.walls
@@ -1105,6 +1116,57 @@ viewBoardCell position =
             , height (px gridSize.cellHeight)
             , left (px (gridSize.cellWidth * position.column + gridBorder.left))
             , top (px (gridSize.cellHeight * position.row + gridBorder.top))
+            ]
+        , draggable "false"
+        , onContextMenuPreventDefault (Tick 0)
+        ]
+        []
+
+
+viewPathTravelled : PathTravelled -> Html.Styled.Html Msg
+viewPathTravelled pathTravelled =
+    div []
+        (case List.head pathTravelled of
+            Just firstPosition ->
+                (firstPosition |> viewPathTravelledSquare)
+                    :: (pathTravelled
+                            |> listMapConsecutively viewPathTravelledSegment
+                       )
+
+            Nothing ->
+                []
+        )
+
+
+viewPathTravelledSegment : Position -> Position -> Html.Styled.Html Msg
+viewPathTravelledSegment pointA pointB =
+    let
+        midpoint =
+            calculateMidpoint pointA pointB
+    in
+    div []
+        [ viewPathTravelledSquare midpoint
+        , viewPathTravelledSquare pointB
+        ]
+
+
+viewPathTravelledSquare : Position -> Html.Styled.Html Msg
+viewPathTravelledSquare position =
+    let
+        gapTop =
+            4
+
+        gapLeft =
+            4
+    in
+    div
+        [ css
+            [ Css.position absolute
+            , width (px (gridSize.cellWidth - gapLeft))
+            , height (px (gridSize.cellHeight - gapTop))
+            , left (px (gridSize.cellWidth * position.column + gridBorder.left + gapLeft / 2))
+            , top (px (gridSize.cellHeight * position.row + gridBorder.top + gapTop / 2))
+            , Css.backgroundColor (hex "#79be7e")
             ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
