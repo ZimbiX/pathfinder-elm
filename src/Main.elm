@@ -199,7 +199,7 @@ update msg model =
 
                 Nothing ->
                     ( model
-                      --|> hideAllWallsIfHideButtonPressed rawKey
+                        |> completeMazeDrawingIfEnterPressed rawKey
                     , Cmd.none
                     )
 
@@ -425,14 +425,14 @@ revealWallIfAtPoint point wall =
         wall
 
 
+completeMazeDrawingIfEnterPressed : RawKey -> Model -> Model
+completeMazeDrawingIfEnterPressed rawKey model =
+    case Keyboard.anyKeyUpper rawKey of
+        Just Enter ->
+            model |> completeMazeDrawing
 
---hideAllWallsIfHideButtonPressed : RawKey -> Model -> Model
---hideAllWallsIfHideButtonPressed rawKey model =
---    case Keyboard.anyKeyUpper rawKey of
---        Just (Character "Z") ->
---            { model | walls = model.walls |> hideAllWalls }
---        _ ->
---            model
+        _ ->
+            model
 
 
 hideAllWalls : Walls -> Walls
@@ -1384,7 +1384,7 @@ viewButtons stage =
                 , div [] [ text "Draw walls with your mouse/finger." ]
                 , div [] [ text "Click/tap to place a gold." ]
                 , div [] [ text "Hold the right mouse button to remove." ]
-                , div [] [ text "Press Done when finished drawing." ]
+                , div [] [ text "Press Done/Enter when finished drawing." ]
                 ]
 
         PlayingStage ->
