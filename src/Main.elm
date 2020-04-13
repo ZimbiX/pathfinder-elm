@@ -217,7 +217,7 @@ update msg model =
                 |> updateMouseFromUnscaled unscaledMouse
                 |> updateDrawing
                 |> mouseProcessorForStageInteractions model.stage
-                |> finishDrawing
+                |> clearDrawingIfFinished
             , Cmd.none
             )
 
@@ -235,6 +235,7 @@ mouseProcessorForStageInteractions stage =
                 >> createGold
                 >> deleteGold
                 >> deleteWall
+                >> createWallsFromFinishedDrawing
 
         PlayingStage ->
             \x -> x
@@ -656,8 +657,8 @@ rangeFloatByIncrement start end =
         |> List.map (\n -> toFloat n + offset)
 
 
-finishDrawing : Model -> Model
-finishDrawing model =
+createWallsFromFinishedDrawing : Model -> Model
+createWallsFromFinishedDrawing model =
     case model.mouse.buttonDown of
         NoMouseButton ->
             case List.head model.snappedDrawingPoints of
@@ -672,10 +673,20 @@ finishDrawing model =
                         walls =
                             List.concat [ newWalls, model.walls ]
                     in
-                    { model | drawing = [], snappedDrawingPoints = [], walls = walls }
+                    { model | walls = walls }
 
                 Nothing ->
-                    { model | drawing = [], snappedDrawingPoints = [] }
+                    model
+
+        _ ->
+            model
+
+
+clearDrawingIfFinished : Model -> Model
+clearDrawingIfFinished model =
+    case model.mouse.buttonDown of
+        NoMouseButton ->
+            { model | drawing = [], snappedDrawingPoints = [] }
 
         _ ->
             model
