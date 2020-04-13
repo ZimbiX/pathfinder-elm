@@ -27,6 +27,7 @@ import Maybe.Extra
 settings =
     { playerMoveSpeed = 0.007
     , wallOpacitySpeed = 0.008
+    , boardZoom = 2
     }
 
 
@@ -226,15 +227,17 @@ update msg model =
                     )
 
         Tick deltaTime ->
-            ( updatePlayerPosition deltaTime model
+            ( model
+                |> updatePlayerPosition deltaTime
                 |> returnToOriginIfPathUnclear
                 |> finishPlayerMove
                 |> updateWallsOpacity deltaTime
             , Cmd.none
             )
 
-        MouseUpdated mouse ->
-            ( { model | mouse = mouse }
+        MouseUpdated unscaledMouse ->
+            ( model
+                |> updateMouseFromUnscaled unscaledMouse
                 |> updateDrawing
                 |> createGold
                 |> deleteGold
@@ -247,6 +250,18 @@ update msg model =
             ( completeMazeDrawing model
             , Cmd.none
             )
+
+
+updateMouseFromUnscaled : Mouse -> Model -> Model
+updateMouseFromUnscaled unscaledMouse model =
+    { model | mouse = { unscaledMouse | position = unscaledMouse.position |> zoomCoordinate } }
+
+
+zoomCoordinate : Coordinate -> Coordinate
+zoomCoordinate coord =
+    { x = coord.x / settings.boardZoom
+    , y = coord.y / settings.boardZoom
+    }
 
 
 updatePlayerPosition : Float -> Model -> Model
@@ -1050,6 +1065,7 @@ viewBoard model =
                     [ width (px 640)
                     , height (px 480)
                     , Css.touchAction Css.none
+                    , Css.property "zoom" ((settings.boardZoom * 100 |> String.fromFloat) ++ "%")
                     ]
               ]
             , playEvents

@@ -65,6 +65,7 @@ $ ./scripts/build
 ### Todo
 
 - Add box shadow to grid
+- Moving player by swiping
 - Verify maze is possible to win before leaving drawing stage
 - Make wall removal hitbox rectangular, matching orientation
 - Unit tests
