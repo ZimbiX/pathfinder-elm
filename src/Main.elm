@@ -216,9 +216,7 @@ update msg model =
             ( model
                 |> updateMouseFromUnscaled unscaledMouse
                 |> updateDrawing
-                |> createGold
-                |> deleteGold
-                |> deleteWall
+                |> mouseProcessorForStageInteractions model.stage
                 |> finishDrawing
             , Cmd.none
             )
@@ -227,6 +225,19 @@ update msg model =
             ( completeMazeDrawing model
             , Cmd.none
             )
+
+
+mouseProcessorForStageInteractions : Stage -> (Model -> Model)
+mouseProcessorForStageInteractions stage =
+    case stage of
+        DrawingStage ->
+            updateSnappedDrawingPoints
+                >> createGold
+                >> deleteGold
+                >> deleteWall
+
+        PlayingStage ->
+            \x -> x
 
 
 updateMouseFromUnscaled : Mouse -> Model -> Model
@@ -549,7 +560,13 @@ updateDrawing model =
 
                 _ ->
                     model.drawing
+    in
+    { model | drawing = drawing }
 
+
+updateSnappedDrawingPoints : Model -> Model
+updateSnappedDrawingPoints model =
+    let
         snappedDrawingPoints =
             case model.mouse.buttonDown of
                 LeftMouseButton ->
@@ -572,7 +589,7 @@ updateDrawing model =
                 _ ->
                     model.snappedDrawingPoints
     in
-    { model | drawing = drawing, snappedDrawingPoints = snappedDrawingPoints }
+    { model | snappedDrawingPoints = snappedDrawingPoints }
 
 
 addGridIntersectionToDrawingWithInterpolation : SnappedDrawingPoints -> Position -> SnappedDrawingPoints
@@ -1025,12 +1042,17 @@ roundFloat =
 
 viewBoard model =
     let
-        playEvents =
+        mouseEvents =
+            [ updateMouseOn "pointerdown"
+            , updateMouseOn "pointerup"
+            , updateMouseOn "pointermove"
+            ]
+
+        viewDrawingStage =
             case model.stage of
                 DrawingStage ->
-                    [ updateMouseOn "pointerdown"
-                    , updateMouseOn "pointerup"
-                    , updateMouseOn "pointermove"
+                    [ lazy viewDrawing model.drawing
+                    , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
                     ]
 
                 PlayingStage ->
@@ -1045,18 +1067,20 @@ viewBoard model =
                     , Css.property "zoom" ((settings.boardZoom * 100 |> String.fromFloat) ++ "%")
                     ]
               ]
-            , playEvents
+            , mouseEvents
             ]
         )
-        [ viewBackground
-        , viewBoardCells
-        , viewPathTravelled model.pathTravelled
-        , lazy viewGolds model.golds
-        , lazy viewPlayer model.position
-        , lazy viewWalls model.walls
-        , lazy viewDrawing model.drawing
-        , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
-        ]
+        (List.concat
+            [ [ viewBackground
+              , viewBoardCells
+              , viewPathTravelled model.pathTravelled
+              , lazy viewGolds model.golds
+              , lazy viewPlayer model.position
+              , lazy viewWalls model.walls
+              ]
+            , viewDrawingStage
+            ]
+        )
 
 
 viewBackground =
