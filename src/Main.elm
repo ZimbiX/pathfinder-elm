@@ -72,7 +72,6 @@ type alias Model =
     , popup : Maybe Popup
 
     -- To move to Maze:
-    , golds : Golds
     , stage : Stage
     , pathTravelled : PathTravelled
     }
@@ -82,6 +81,7 @@ type alias Maze =
     { position : Position
     , currentMove : CurrentMove
     , walls : Walls
+    , golds : Golds
     }
 
 
@@ -176,7 +176,6 @@ init _ =
       , popup = Nothing
 
       -- To move to Maze:
-      , golds = []
       , stage = DrawingStage
       , pathTravelled = []
       }
@@ -188,6 +187,7 @@ initialMaze =
     { position = { column = 0, row = 0 }
     , currentMove = Nothing
     , walls = []
+    , golds = []
     }
 
 
@@ -992,9 +992,9 @@ createGold model =
         if withinBoard nearestGridCenter then
             let
                 golds =
-                    List.concat [ [ nearestGridCenter ], model.golds ]
+                    List.concat [ [ nearestGridCenter ], (model.mazes |> Tuple.first).golds ]
             in
-            { model | golds = golds }
+            { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | golds = golds }) }
 
         else
             model
@@ -1009,9 +1009,9 @@ deleteGold model =
         RightMouseButton ->
             let
                 golds =
-                    List.filter (itemIsNotUnderPointer model.mouse) model.golds
+                    List.filter (itemIsNotUnderPointer model.mouse) (model.mazes |> Tuple.first).golds
             in
-            { model | golds = golds }
+            { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | golds = golds }) }
 
         _ ->
             model
@@ -1151,7 +1151,7 @@ endGameIfWon model =
         PlayingStage ->
             if
                 ((model.mazes |> Tuple.first).currentMove == Nothing)
-                    && (model.golds |> List.any (\gold -> gold == (model.mazes |> Tuple.first).position))
+                    && ((model.mazes |> Tuple.first).golds |> List.any (\gold -> gold == (model.mazes |> Tuple.first).position))
             then
                 { model
                     | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = (model.mazes |> Tuple.first).walls |> revealAllWalls })
@@ -1361,7 +1361,7 @@ viewBoard model =
         (List.concat
             [ [ viewBoardCells
               , viewPathTravelled model.pathTravelled
-              , lazy viewGolds model.golds
+              , lazy viewGolds (model.mazes |> Tuple.first).golds
               , lazy viewPlayer (model.mazes |> Tuple.first).position
               , lazy viewWalls (model.mazes |> Tuple.first).walls
               ]
