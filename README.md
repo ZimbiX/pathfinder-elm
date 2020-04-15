@@ -64,6 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
+- Second player
 - Count moves and wall hits and show this in the winning message
 - Prevent touchscreen button lag
 - Verify maze is possible to win before leaving drawing stage
@@ -80,7 +81,6 @@ $ ./scripts/build
 - Deduplicate golds
 - Deduplicate path travelled
 - Drag player to reposition
-- Second player (n players?)
 - Different background colour for each maze within a game
 - Backend to store game state
 - Sync game state with backend

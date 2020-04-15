@@ -65,16 +65,23 @@ main =
 
 
 type alias Model =
-    { position : Position
-    , currentMove : CurrentMove
-    , walls : Walls
-    , golds : Golds
+    { mazes : ( Maze, Maze )
     , mouse : Mouse
     , drawing : Drawing
     , snappedDrawingPoints : SnappedDrawingPoints
+    , popup : Maybe Popup
+
+    -- To move to Maze:
+    , currentMove : CurrentMove
+    , walls : Walls
+    , golds : Golds
     , stage : Stage
     , pathTravelled : PathTravelled
-    , popup : Maybe Popup
+    }
+
+
+type alias Maze =
+    { position : Position
     }
 
 
@@ -158,22 +165,30 @@ type alias Popup =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { position = { column = 0, row = 0 }
-      , currentMove = Nothing
-      , walls = []
-      , golds = []
+    ( { mazes =
+            ( initialMaze, initialMaze )
       , mouse =
             { position = { x = 0, y = 0 }
             , buttonDown = NoMouseButton
             }
       , drawing = []
       , snappedDrawingPoints = []
+      , popup = Nothing
+
+      -- To move to Maze:
+      , currentMove = Nothing
+      , walls = []
+      , golds = []
       , stage = DrawingStage
       , pathTravelled = []
-      , popup = Nothing
       }
     , Cmd.none
     )
+
+
+initialMaze =
+    { position = { column = 0, row = 0 }
+    }
 
 
 
@@ -284,26 +299,31 @@ updatePlayerPosition deltaTime model =
                 column =
                     case currentMove.direction of
                         MoveRight ->
-                            model.position.column + moveDistance
+                            (model.mazes |> Tuple.first).position.column + moveDistance
 
                         MoveLeft ->
-                            model.position.column - moveDistance
+                            (model.mazes |> Tuple.first).position.column - moveDistance
 
                         _ ->
-                            model.position.column
+                            (model.mazes |> Tuple.first).position.column
 
                 row =
                     case currentMove.direction of
                         MoveDown ->
-                            model.position.row + moveDistance
+                            (model.mazes |> Tuple.first).position.row + moveDistance
 
                         MoveUp ->
-                            model.position.row - moveDistance
+                            (model.mazes |> Tuple.first).position.row - moveDistance
 
                         _ ->
-                            model.position.row
+                            (model.mazes |> Tuple.first).position.row
+
+                position =
+                    Position column row
             in
-            { model | position = Position column row }
+            { model
+                | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | position = position })
+            }
 
         Nothing ->
             model
@@ -406,14 +426,21 @@ finishPlayerMove model =
                 model
 
             else if currentMove.reversing then
-                { model | position = currentMove.origin, currentMove = Nothing }
+                { model
+                    | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | position = currentMove.origin })
+                    , currentMove = Nothing
+                }
 
             else
                 let
                     pathTravelled =
                         List.concat [ [ currentMove.target ], model.pathTravelled ]
                 in
-                { model | position = currentMove.target, currentMove = Nothing, pathTravelled = pathTravelled }
+                { model
+                    | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | position = currentMove.target })
+                    , currentMove = Nothing
+                    , pathTravelled = pathTravelled
+                }
 
         Nothing ->
             model
@@ -458,15 +485,15 @@ pathAheadClear : Model -> Bool
 pathAheadClear model =
     case model.currentMove of
         Just currentMove ->
-            if not (withinBoard model.position) then
+            if not (withinBoard (model.mazes |> Tuple.first).position) then
                 False
 
             else if wallExistsBetweenPoints model.walls currentMove.origin currentMove.target then
-                (numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) model.position.column
-                    || numberBetween currentMove.origin.column (currentMove.origin.column - 0.4) model.position.column
+                (numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) (model.mazes |> Tuple.first).position.column
+                    || numberBetween currentMove.origin.column (currentMove.origin.column - 0.4) (model.mazes |> Tuple.first).position.column
                 )
-                    && (numberBetween currentMove.origin.row (currentMove.origin.row + 0.4) model.position.row
-                            || numberBetween currentMove.origin.row (currentMove.origin.row - 0.4) model.position.row
+                    && (numberBetween currentMove.origin.row (currentMove.origin.row + 0.4) (model.mazes |> Tuple.first).position.row
+                            || numberBetween currentMove.origin.row (currentMove.origin.row - 0.4) (model.mazes |> Tuple.first).position.row
                        )
 
             else
@@ -575,10 +602,10 @@ playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position
 playerWithinMoveBounds model currentMove =
     let
         columnWithinMoveBounds =
-            numberBetween currentMove.origin.column currentMove.target.column model.position.column
+            numberBetween currentMove.origin.column currentMove.target.column (model.mazes |> Tuple.first).position.column
 
         rowWithinMoveBounds =
-            numberBetween currentMove.origin.row currentMove.target.row model.position.row
+            numberBetween currentMove.origin.row currentMove.target.row (model.mazes |> Tuple.first).position.row
     in
     columnWithinMoveBounds && rowWithinMoveBounds
 
@@ -623,7 +650,7 @@ startPlayerMove : MoveDirection -> Model -> Model
 startPlayerMove moveDirection model =
     let
         origin =
-            { column = model.position.column, row = model.position.row }
+            { column = (model.mazes |> Tuple.first).position.column, row = (model.mazes |> Tuple.first).position.row }
     in
     case moveDirection of
         MoveRight ->
@@ -1016,7 +1043,7 @@ completeMazeDrawing : Model -> Model
 completeMazeDrawing model =
     case model.stage of
         DrawingStage ->
-            { model | stage = PlayingStage, walls = model.walls |> hideAllWalls, pathTravelled = [ model.position ] }
+            { model | stage = PlayingStage, walls = model.walls |> hideAllWalls, pathTravelled = [ (model.mazes |> Tuple.first).position ] }
 
         PlayingStage ->
             model
@@ -1038,7 +1065,7 @@ endGameIfWon model =
         PlayingStage ->
             if
                 (model.currentMove == Nothing)
-                    && (model.golds |> List.any (\gold -> gold == model.position))
+                    && (model.golds |> List.any (\gold -> gold == (model.mazes |> Tuple.first).position))
             then
                 { model | stage = FirstWinStage, popup = winPopup, walls = model.walls |> revealAllWalls }
 
@@ -1245,7 +1272,7 @@ viewBoard model =
             [ [ viewBoardCells
               , viewPathTravelled model.pathTravelled
               , lazy viewGolds model.golds
-              , lazy viewPlayer model.position
+              , lazy viewPlayer (model.mazes |> Tuple.first).position
               , lazy viewWalls model.walls
               ]
             , viewDrawingStage
