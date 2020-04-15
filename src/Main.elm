@@ -72,7 +72,6 @@ type alias Model =
     , popup : Maybe Popup
 
     -- To move to Maze:
-    , walls : Walls
     , golds : Golds
     , stage : Stage
     , pathTravelled : PathTravelled
@@ -82,6 +81,7 @@ type alias Model =
 type alias Maze =
     { position : Position
     , currentMove : CurrentMove
+    , walls : Walls
     }
 
 
@@ -176,7 +176,6 @@ init _ =
       , popup = Nothing
 
       -- To move to Maze:
-      , walls = []
       , golds = []
       , stage = DrawingStage
       , pathTravelled = []
@@ -188,6 +187,7 @@ init _ =
 initialMaze =
     { position = { column = 0, row = 0 }
     , currentMove = Nothing
+    , walls = []
     }
 
 
@@ -506,7 +506,7 @@ pathAheadClear model =
             if not (withinBoard (model.mazes |> Tuple.first).position) then
                 False
 
-            else if wallExistsBetweenPoints model.walls currentMove.origin currentMove.target then
+            else if wallExistsBetweenPoints (model.mazes |> Tuple.first).walls currentMove.origin currentMove.target then
                 (numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) (model.mazes |> Tuple.first).position.column
                     || numberBetween currentMove.origin.column (currentMove.origin.column - 0.4) (model.mazes |> Tuple.first).position.column
                 )
@@ -559,9 +559,9 @@ revealHitWall model =
                     calculateMidpoint currentMove.origin currentMove.target
 
                 walls =
-                    model.walls |> List.map (revealWallIfAtPoint currentMoveMidpoint)
+                    (model.mazes |> Tuple.first).walls |> List.map (revealWallIfAtPoint currentMoveMidpoint)
             in
-            { model | walls = walls }
+            { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = walls }) }
 
         Nothing ->
             model
@@ -746,7 +746,11 @@ startPlayerMove moveDirection model =
 
 updateWallsOpacity : Float -> Model -> Model
 updateWallsOpacity deltaTime model =
-    { model | walls = List.map (updateWallOpacity deltaTime) model.walls }
+    let
+        walls =
+            List.map (updateWallOpacity deltaTime) (model.mazes |> Tuple.first).walls
+    in
+    { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = walls }) }
 
 
 updateWallOpacity : Float -> Wall -> Wall
@@ -890,9 +894,9 @@ createWallsFromFinishedDrawing model =
                             listOfMaybeWalls |> Maybe.Extra.values |> Debug.log "New walls"
 
                         walls =
-                            List.concat [ newWalls, model.walls ]
+                            List.concat [ newWalls, (model.mazes |> Tuple.first).walls ]
                     in
-                    { model | walls = walls }
+                    { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = walls }) }
 
                 Nothing ->
                     model
@@ -1019,9 +1023,9 @@ deleteWall model =
         RightMouseButton ->
             let
                 walls =
-                    List.filter (wallIsNotUnderPointer model.mouse) model.walls
+                    List.filter (wallIsNotUnderPointer model.mouse) (model.mazes |> Tuple.first).walls
             in
-            { model | walls = walls }
+            { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = walls }) }
 
         _ ->
             model
@@ -1121,7 +1125,11 @@ completeMazeDrawing : Model -> Model
 completeMazeDrawing model =
     case model.stage of
         DrawingStage ->
-            { model | stage = PlayingStage, walls = model.walls |> hideAllWalls, pathTravelled = [ (model.mazes |> Tuple.first).position ] }
+            { model
+                | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = (model.mazes |> Tuple.first).walls |> hideAllWalls })
+                , stage = PlayingStage
+                , pathTravelled = [ (model.mazes |> Tuple.first).position ]
+            }
 
         PlayingStage ->
             model
@@ -1145,7 +1153,11 @@ endGameIfWon model =
                 ((model.mazes |> Tuple.first).currentMove == Nothing)
                     && (model.golds |> List.any (\gold -> gold == (model.mazes |> Tuple.first).position))
             then
-                { model | stage = FirstWinStage, popup = winPopup, walls = model.walls |> revealAllWalls }
+                { model
+                    | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = (model.mazes |> Tuple.first).walls |> revealAllWalls })
+                    , stage = FirstWinStage
+                    , popup = winPopup
+                }
 
             else
                 model
@@ -1163,7 +1175,7 @@ subscriptions model =
     let
         animationActive =
             ((model.mazes |> Tuple.first).currentMove /= Nothing)
-                || wallsAreAnimating model.walls
+                || wallsAreAnimating (model.mazes |> Tuple.first).walls
 
         animationSubscription =
             if animationActive then
@@ -1351,7 +1363,7 @@ viewBoard model =
               , viewPathTravelled model.pathTravelled
               , lazy viewGolds model.golds
               , lazy viewPlayer (model.mazes |> Tuple.first).position
-              , lazy viewWalls model.walls
+              , lazy viewWalls (model.mazes |> Tuple.first).walls
               ]
             , viewDrawingStage
             , [ viewPopup model.popup ]
