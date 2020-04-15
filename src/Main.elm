@@ -70,9 +70,6 @@ type alias Model =
     , drawing : Drawing
     , snappedDrawingPoints : SnappedDrawingPoints
     , popup : Maybe Popup
-
-    -- To move to Maze:
-    , pathTravelled : PathTravelled
     }
 
 
@@ -82,6 +79,7 @@ type alias Maze =
     , walls : Walls
     , golds : Golds
     , stage : Stage
+    , pathTravelled : PathTravelled
     }
 
 
@@ -174,9 +172,6 @@ init _ =
       , drawing = []
       , snappedDrawingPoints = []
       , popup = Nothing
-
-      -- To move to Maze:
-      , pathTravelled = []
       }
     , Cmd.none
     )
@@ -188,6 +183,7 @@ initialMaze =
     , walls = []
     , golds = []
     , stage = DrawingStage
+    , pathTravelled = []
     }
 
 
@@ -441,7 +437,7 @@ finishPlayerMove model =
             else
                 let
                     pathTravelled =
-                        List.concat [ [ currentMove.target ], model.pathTravelled ]
+                        List.concat [ [ currentMove.target ], (model.mazes |> Tuple.first).pathTravelled ]
                 in
                 { model
                     | mazes =
@@ -451,9 +447,9 @@ finishPlayerMove model =
                                     { maze
                                         | position = currentMove.target
                                         , currentMove = Nothing
+                                        , pathTravelled = pathTravelled
                                     }
                                 )
-                    , pathTravelled = pathTravelled
                 }
 
         Nothing ->
@@ -1133,9 +1129,9 @@ completeMazeDrawing model =
                                 { maze
                                     | walls = (model.mazes |> Tuple.first).walls |> hideAllWalls
                                     , stage = PlayingStage
+                                    , pathTravelled = [ (model.mazes |> Tuple.first).position ]
                                 }
                             )
-                , pathTravelled = [ (model.mazes |> Tuple.first).position ]
             }
 
         PlayingStage ->
@@ -1374,7 +1370,7 @@ viewBoard model =
         )
         (List.concat
             [ [ viewBoardCells
-              , viewPathTravelled model.pathTravelled
+              , viewPathTravelled (model.mazes |> Tuple.first).pathTravelled
               , lazy viewGolds (model.mazes |> Tuple.first).golds
               , lazy viewPlayer (model.mazes |> Tuple.first).position
               , lazy viewWalls (model.mazes |> Tuple.first).walls
