@@ -5,6 +5,7 @@ import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
 import Css exposing (absolute, backgroundColor, border3, height, hex, left, opacity, pct, px, rad, rotate, solid, top, transform, width)
 import Css.Animations
+import Css.Transitions
 import Debug
 import Html exposing (Html)
 import Html.Events.Extra
@@ -30,6 +31,10 @@ settings =
     , boardZoom = 2
     , boardWidth = 640
     , boardHeight = 480
+    , mazeSwitching =
+        { delaySeconds = 0.2
+        , animationDurationSeconds = 0.8
+        }
     }
 
 
@@ -70,6 +75,7 @@ type alias Model =
     , drawing : Drawing
     , snappedDrawingPoints : SnappedDrawingPoints
     , popup : Maybe Popup
+    , switchingMaze : SwitchingMazeState
     }
 
 
@@ -161,6 +167,11 @@ type alias Popup =
     { messageLines : List String }
 
 
+type SwitchingMazeState
+    = SwitchingMaze Float
+    | NotSwitchingMaze
+
+
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { mazes =
@@ -172,6 +183,7 @@ init _ =
       , drawing = []
       , snappedDrawingPoints = []
       , popup = Nothing
+      , switchingMaze = NotSwitchingMaze
       }
     , Cmd.none
     )
@@ -233,6 +245,8 @@ update msg model =
                 |> finishPlayerMove
                 |> endGameIfWon
                 |> updateWallsOpacity deltaTime
+                |> keepSwitchingMazes deltaTime
+                |> finishSwitchingMazes
             , Cmd.none
             )
 
@@ -434,7 +448,7 @@ finishPlayerMove model =
                                     }
                                 )
                 }
-                    |> switchMazes
+                    |> startSwitchingMazes
 
             else
                 let
@@ -598,20 +612,50 @@ switchMazeIfMPressed : RawKey -> Model -> Model
 switchMazeIfMPressed rawKey model =
     case Keyboard.anyKeyUpper rawKey of
         Just (Character "M") ->
-            model |> switchMazes
+            model |> startSwitchingMazes
 
         _ ->
             model
 
 
-switchMazes : Model -> Model
-switchMazes model =
-    { model
-        | mazes =
-            ( model.mazes |> Tuple.second
-            , model.mazes |> Tuple.first
-            )
-    }
+startSwitchingMazes : Model -> Model
+startSwitchingMazes model =
+    let
+        initiallyDelayedProgressFraction =
+            -settings.mazeSwitching.delaySeconds
+                * (1 / settings.mazeSwitching.animationDurationSeconds)
+    in
+    { model | switchingMaze = SwitchingMaze initiallyDelayedProgressFraction }
+
+
+keepSwitchingMazes : Float -> Model -> Model
+keepSwitchingMazes deltaTime model =
+    case model.switchingMaze of
+        SwitchingMaze progressFraction ->
+            { model | switchingMaze = SwitchingMaze (min (progressFraction + ((deltaTime / 1000) / settings.mazeSwitching.animationDurationSeconds)) 1) |> Debug.log "switching progressFraction" }
+
+        NotSwitchingMaze ->
+            model
+
+
+finishSwitchingMazes : Model -> Model
+finishSwitchingMazes model =
+    case model.switchingMaze of
+        SwitchingMaze progressFraction ->
+            if progressFraction == 1 then
+                { model
+                    | switchingMaze = NotSwitchingMaze
+                    , mazes =
+                        ( model.mazes |> Tuple.second
+                        , model.mazes |> Tuple.first
+                        )
+                }
+
+            else
+                model
+
+        NotSwitchingMaze ->
+            model
 
 
 hideAllWalls : Walls -> Walls
@@ -1155,7 +1199,7 @@ completeMazeDrawing model =
                                 }
                             )
             }
-                |> switchMazes
+                |> startSwitchingMazes
 
         PlayingStage ->
             model
@@ -1209,6 +1253,7 @@ subscriptions model =
         animationActive =
             ((model.mazes |> Tuple.first).currentMove /= Nothing)
                 || wallsAreAnimating (model.mazes |> Tuple.first).walls
+                || (model.switchingMaze /= NotSwitchingMaze)
 
         animationSubscription =
             if animationActive then
@@ -1291,7 +1336,15 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "PathFinder"
     , body =
-        [ div [ css [ fontFamily, fontSize, Css.width (Css.pct 100), Css.height (Css.pct 100) ] ]
+        [ div
+            [ css
+                [ fontFamily
+                , fontSize
+                , Css.width (Css.pct 100)
+                , Css.height (Css.pct 100)
+                , Css.property "perspective" "1000px"
+                ]
+            ]
             [ viewBackground
             , lazy viewBoard model
             , lazy viewButtons (model.mazes |> Tuple.first).stage
@@ -1365,7 +1418,7 @@ viewBoard model =
             ]
 
         viewDrawingStage =
-            case (model.mazes |> Tuple.first).stage of
+            case activeMaze.stage of
                 DrawingStage ->
                     [ lazy viewDrawing model.drawing
                     , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
@@ -1376,32 +1429,76 @@ viewBoard model =
 
                 FirstWinStage ->
                     []
+
+        flipDegrees =
+            case model.switchingMaze of
+                SwitchingMaze progressFraction ->
+                    if progressFraction >= 0 then
+                        180 |> Debug.log "flipDegrees"
+
+                    else
+                        0 |> Debug.log "flipDegrees"
+
+                NotSwitchingMaze ->
+                    0
+
+        activeMaze =
+            mazes |> Tuple.first
+
+        frontMaze =
+            mazes |> Tuple.first
+
+        backMaze =
+            mazes |> Tuple.second
+
+        mazes =
+            model.mazes
+
+        flipAnimateCss =
+            case model.switchingMaze of
+                SwitchingMaze progressFraction ->
+                    [ Css.Transitions.transition [ Css.Transitions.transform (settings.mazeSwitching.animationDurationSeconds * 1000) ] ]
+
+                NotSwitchingMaze ->
+                    []
     in
     div
         (List.concat
             [ [ css
-                    [ width (px settings.boardWidth)
-                    , height (px settings.boardHeight)
-                    , Css.touchAction Css.none
-                    , Css.property "zoom" ((settings.boardZoom * 100 |> String.fromFloat) ++ "%")
+                    (List.concat
+                        [ [ width (px settings.boardWidth)
+                          , height (px settings.boardHeight)
+                          , Css.touchAction Css.none
+                          , Css.property "zoom" ((settings.boardZoom * 100 |> String.fromFloat) ++ "%")
+                          , Css.transformStyle Css.preserve3d
+                          , Css.transforms [ Css.rotateY (Css.deg flipDegrees) ]
 
-                    --, Css.border3 (px 1) Css.solid (hex "#f00")
-                    ]
+                          --, Css.border3 (px 1) Css.solid (hex "#f00")
+                          ]
+                        , flipAnimateCss
+                        ]
+                    )
               ]
             , mouseEvents
             ]
         )
         (List.concat
-            [ [ viewBoardCells
-              , viewPathTravelled (model.mazes |> Tuple.first).pathTravelled
-              , lazy viewGolds (model.mazes |> Tuple.first).golds
-              , lazy viewPlayer (model.mazes |> Tuple.first).position
-              , lazy viewWalls (model.mazes |> Tuple.first).walls
+            [ [ div [ css [ Css.property "backface-visibility" "hidden" ] ] (viewGrid frontMaze)
+              , div [ css [ Css.transforms [ Css.rotateY (Css.deg 180) ] ] ] (viewGrid backMaze)
               ]
             , viewDrawingStage
             , [ viewPopup model.popup ]
             ]
         )
+
+
+viewGrid maze =
+    [ viewBoardCells
+    , viewPathTravelled maze.pathTravelled
+    , lazy viewGolds maze.golds
+    , lazy viewPlayer maze.position
+    , lazy viewWalls maze.walls
+    ]
 
 
 viewBackground =
