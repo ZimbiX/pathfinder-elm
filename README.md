@@ -15,7 +15,7 @@
 
 ## Play
 
-This app hardly does anything yet, but you can check it out at:
+Currently only same-device multiplayer is supported. You can check it out at:
 
 https://pathfinder-elm.netlify.com/
 
@@ -64,9 +64,10 @@ $ ./scripts/build
 
 ### Todo
 
-- Second player
-    + Switch maze from being a tuple to `mazes.active` and `mazes.inactive`
-    + Call `switchMazes` from somewhere better
+- Prevent movement while switching maze
+- Prevent drawing while switching maze
+- Switch mazes from being a tuple to `mazes.active` and `mazes.inactive`
+- Call `switchMazes` from somewhere better
 - Count moves and wall hits and show this in the winning message
 - Prevent touchscreen button lag
 - Verify maze is possible to win before leaving drawing stage
