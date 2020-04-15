@@ -72,7 +72,6 @@ type alias Model =
     , popup : Maybe Popup
 
     -- To move to Maze:
-    , stage : Stage
     , pathTravelled : PathTravelled
     }
 
@@ -82,6 +81,7 @@ type alias Maze =
     , currentMove : CurrentMove
     , walls : Walls
     , golds : Golds
+    , stage : Stage
     }
 
 
@@ -176,7 +176,6 @@ init _ =
       , popup = Nothing
 
       -- To move to Maze:
-      , stage = DrawingStage
       , pathTravelled = []
       }
     , Cmd.none
@@ -188,6 +187,7 @@ initialMaze =
     , currentMove = Nothing
     , walls = []
     , golds = []
+    , stage = DrawingStage
     }
 
 
@@ -243,7 +243,7 @@ update msg model =
             ( model
                 |> updateMouseFromUnscaled unscaledMouse
                 |> updateDrawing
-                |> mouseProcessorForStageInteractions model.stage
+                |> mouseProcessorForStageInteractions (model.mazes |> Tuple.first).stage
                 |> clearDrawingIfFinished
             , Cmd.none
             )
@@ -407,7 +407,7 @@ tryStartPlayerMove moveDirection model =
             model
 
         Nothing ->
-            case model.stage of
+            case (model.mazes |> Tuple.first).stage of
                 PlayingStage ->
                     startPlayerMove moveDirection model
 
@@ -1123,11 +1123,18 @@ withinBoard position =
 
 completeMazeDrawing : Model -> Model
 completeMazeDrawing model =
-    case model.stage of
+    case (model.mazes |> Tuple.first).stage of
         DrawingStage ->
             { model
-                | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = (model.mazes |> Tuple.first).walls |> hideAllWalls })
-                , stage = PlayingStage
+                | mazes =
+                    model.mazes
+                        |> Tuple.mapFirst
+                            (\maze ->
+                                { maze
+                                    | walls = (model.mazes |> Tuple.first).walls |> hideAllWalls
+                                    , stage = PlayingStage
+                                }
+                            )
                 , pathTravelled = [ (model.mazes |> Tuple.first).position ]
             }
 
@@ -1144,7 +1151,7 @@ endGameIfWon model =
         winPopup =
             Just { messageLines = [ "You win! :D" ] }
     in
-    case model.stage of
+    case (model.mazes |> Tuple.first).stage of
         DrawingStage ->
             model
 
@@ -1154,8 +1161,15 @@ endGameIfWon model =
                     && ((model.mazes |> Tuple.first).golds |> List.any (\gold -> gold == (model.mazes |> Tuple.first).position))
             then
                 { model
-                    | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = (model.mazes |> Tuple.first).walls |> revealAllWalls })
-                    , stage = FirstWinStage
+                    | mazes =
+                        model.mazes
+                            |> Tuple.mapFirst
+                                (\maze ->
+                                    { maze
+                                        | walls = (model.mazes |> Tuple.first).walls |> revealAllWalls
+                                        , stage = FirstWinStage
+                                    }
+                                )
                     , popup = winPopup
                 }
 
@@ -1261,7 +1275,7 @@ view model =
         [ div [ css [ fontFamily, fontSize, Css.width (Css.pct 100), Css.height (Css.pct 100) ] ]
             [ viewBackground
             , lazy viewBoard model
-            , lazy viewButtons model.stage
+            , lazy viewButtons (model.mazes |> Tuple.first).stage
             , viewGithubLink
             ]
             |> toUnstyled
@@ -1332,7 +1346,7 @@ viewBoard model =
             ]
 
         viewDrawingStage =
-            case model.stage of
+            case (model.mazes |> Tuple.first).stage of
                 DrawingStage ->
                     [ lazy viewDrawing model.drawing
                     , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
