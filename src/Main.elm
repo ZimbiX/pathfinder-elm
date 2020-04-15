@@ -72,7 +72,6 @@ type alias Model =
     , popup : Maybe Popup
 
     -- To move to Maze:
-    , currentMove : CurrentMove
     , walls : Walls
     , golds : Golds
     , stage : Stage
@@ -82,6 +81,7 @@ type alias Model =
 
 type alias Maze =
     { position : Position
+    , currentMove : CurrentMove
     }
 
 
@@ -176,7 +176,6 @@ init _ =
       , popup = Nothing
 
       -- To move to Maze:
-      , currentMove = Nothing
       , walls = []
       , golds = []
       , stage = DrawingStage
@@ -188,6 +187,7 @@ init _ =
 
 initialMaze =
     { position = { column = 0, row = 0 }
+    , currentMove = Nothing
     }
 
 
@@ -290,7 +290,7 @@ zoomCoordinate coord =
 
 updatePlayerPosition : Float -> Model -> Model
 updatePlayerPosition deltaTime model =
-    case model.currentMove of
+    case (model.mazes |> Tuple.first).currentMove of
         Just currentMove ->
             let
                 moveDistance =
@@ -402,7 +402,7 @@ degreesFromRadians angleRadians =
 
 tryStartPlayerMove : MoveDirection -> Model -> Model
 tryStartPlayerMove moveDirection model =
-    case model.currentMove of
+    case (model.mazes |> Tuple.first).currentMove of
         Just _ ->
             model
 
@@ -420,15 +420,22 @@ tryStartPlayerMove moveDirection model =
 
 finishPlayerMove : Model -> Model
 finishPlayerMove model =
-    case model.currentMove of
+    case (model.mazes |> Tuple.first).currentMove of
         Just currentMove ->
             if playerWithinMoveBounds model currentMove then
                 model
 
             else if currentMove.reversing then
                 { model
-                    | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | position = currentMove.origin })
-                    , currentMove = Nothing
+                    | mazes =
+                        model.mazes
+                            |> Tuple.mapFirst
+                                (\maze ->
+                                    { maze
+                                        | position = currentMove.origin
+                                        , currentMove = Nothing
+                                    }
+                                )
                 }
 
             else
@@ -437,8 +444,15 @@ finishPlayerMove model =
                         List.concat [ [ currentMove.target ], model.pathTravelled ]
                 in
                 { model
-                    | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | position = currentMove.target })
-                    , currentMove = Nothing
+                    | mazes =
+                        model.mazes
+                            |> Tuple.mapFirst
+                                (\maze ->
+                                    { maze
+                                        | position = currentMove.target
+                                        , currentMove = Nothing
+                                    }
+                                )
                     , pathTravelled = pathTravelled
                 }
 
@@ -452,13 +466,17 @@ returnToOriginIfPathUnclear model =
         model
 
     else
-        case model.currentMove of
+        case (model.mazes |> Tuple.first).currentMove of
             Just currentMove ->
                 if currentMove.reversing then
                     model
 
                 else
-                    { model | currentMove = Just { currentMove | reversing = True, direction = oppositeDirection currentMove.direction } }
+                    let
+                        returnMove =
+                            Just { currentMove | reversing = True, direction = oppositeDirection currentMove.direction }
+                    in
+                    { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | currentMove = returnMove }) }
                         |> revealHitWall
 
             Nothing ->
@@ -483,7 +501,7 @@ oppositeDirection direction =
 
 pathAheadClear : Model -> Bool
 pathAheadClear model =
-    case model.currentMove of
+    case (model.mazes |> Tuple.first).currentMove of
         Just currentMove ->
             if not (withinBoard (model.mazes |> Tuple.first).position) then
                 False
@@ -534,7 +552,7 @@ wallIsAtPoint point wall =
 
 revealHitWall : Model -> Model
 revealHitWall model =
-    case model.currentMove of
+    case (model.mazes |> Tuple.first).currentMove of
         Just currentMove ->
             let
                 currentMoveMidpoint =
@@ -654,16 +672,76 @@ startPlayerMove moveDirection model =
     in
     case moveDirection of
         MoveRight ->
-            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | column = origin.column + 1 }, reversing = False } }
+            { model
+                | mazes =
+                    model.mazes
+                        |> Tuple.mapFirst
+                            (\maze ->
+                                { maze
+                                    | currentMove =
+                                        Just
+                                            { direction = moveDirection
+                                            , origin = origin
+                                            , target = { origin | column = origin.column + 1 }
+                                            , reversing = False
+                                            }
+                                }
+                            )
+            }
 
         MoveLeft ->
-            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | column = origin.column - 1 }, reversing = False } }
+            { model
+                | mazes =
+                    model.mazes
+                        |> Tuple.mapFirst
+                            (\maze ->
+                                { maze
+                                    | currentMove =
+                                        Just
+                                            { direction = moveDirection
+                                            , origin = origin
+                                            , target = { origin | column = origin.column - 1 }
+                                            , reversing = False
+                                            }
+                                }
+                            )
+            }
 
         MoveUp ->
-            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | row = origin.row - 1 }, reversing = False } }
+            { model
+                | mazes =
+                    model.mazes
+                        |> Tuple.mapFirst
+                            (\maze ->
+                                { maze
+                                    | currentMove =
+                                        Just
+                                            { direction = moveDirection
+                                            , origin = origin
+                                            , target = { origin | row = origin.row - 1 }
+                                            , reversing = False
+                                            }
+                                }
+                            )
+            }
 
         MoveDown ->
-            { model | currentMove = Just { direction = moveDirection, origin = origin, target = { origin | row = origin.row + 1 }, reversing = False } }
+            { model
+                | mazes =
+                    model.mazes
+                        |> Tuple.mapFirst
+                            (\maze ->
+                                { maze
+                                    | currentMove =
+                                        Just
+                                            { direction = moveDirection
+                                            , origin = origin
+                                            , target = { origin | row = origin.row + 1 }
+                                            , reversing = False
+                                            }
+                                }
+                            )
+            }
 
 
 updateWallsOpacity : Float -> Model -> Model
@@ -1064,7 +1142,7 @@ endGameIfWon model =
 
         PlayingStage ->
             if
-                (model.currentMove == Nothing)
+                ((model.mazes |> Tuple.first).currentMove == Nothing)
                     && (model.golds |> List.any (\gold -> gold == (model.mazes |> Tuple.first).position))
             then
                 { model | stage = FirstWinStage, popup = winPopup, walls = model.walls |> revealAllWalls }
@@ -1084,7 +1162,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     let
         animationActive =
-            (model.currentMove /= Nothing)
+            ((model.mazes |> Tuple.first).currentMove /= Nothing)
                 || wallsAreAnimating model.walls
 
         animationSubscription =
