@@ -65,6 +65,8 @@ $ ./scripts/build
 ### Todo
 
 - Second player
+    + Switch maze from being a tuple to `mazes.active` and `mazes.inactive`
+    + Call `switchMazes` from somewhere better
 - Count moves and wall hits and show this in the winning message
 - Prevent touchscreen button lag
 - Verify maze is possible to win before leaving drawing stage

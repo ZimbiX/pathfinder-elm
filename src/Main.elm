@@ -222,6 +222,7 @@ update msg model =
                     ( model
                         |> completeMazeDrawingIfEnterPressed rawKey
                         |> dismissPopupIfEnterPressed rawKey
+                        |> switchMazeIfMPressed rawKey
                     , Cmd.none
                     )
 
@@ -433,6 +434,7 @@ finishPlayerMove model =
                                     }
                                 )
                 }
+                    |> switchMazes
 
             else
                 let
@@ -590,6 +592,26 @@ dismissPopupIfEnterPressed rawKey model =
 
         _ ->
             model
+
+
+switchMazeIfMPressed : RawKey -> Model -> Model
+switchMazeIfMPressed rawKey model =
+    case Keyboard.anyKeyUpper rawKey of
+        Just (Character "M") ->
+            model |> switchMazes
+
+        _ ->
+            model
+
+
+switchMazes : Model -> Model
+switchMazes model =
+    { model
+        | mazes =
+            ( model.mazes |> Tuple.second
+            , model.mazes |> Tuple.first
+            )
+    }
 
 
 hideAllWalls : Walls -> Walls
@@ -1133,6 +1155,7 @@ completeMazeDrawing model =
                                 }
                             )
             }
+                |> switchMazes
 
         PlayingStage ->
             model
