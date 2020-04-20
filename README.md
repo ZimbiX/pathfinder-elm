@@ -77,7 +77,6 @@ $ ./scripts/build
       - `^v<>`: moves
       - `s`: switch player
 - Fix board flipping stretching sideways when widescreen
-- Prevent drawing while switching maze
 - Allow the loser to finish the maze
 - Switch mazes from being a tuple to `mazes.active` and `mazes.inactive`
 - Call `switchMazes` from somewhere better

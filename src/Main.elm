@@ -840,6 +840,17 @@ updateWallOpacity deltaTime wall =
 
 updateDrawing : Model -> Model
 updateDrawing model =
+    -- The drawing is required for detecting taps/swipes, so we need to update the drawing at all times, except when all input should be disabled
+    case model.switchingMaze of
+        SwitchingMaze _ ->
+            model |> clearDrawing
+
+        NotSwitchingMaze ->
+            model |> addMousePositionToDrawingIfMouseDown
+
+
+addMousePositionToDrawingIfMouseDown : Model -> Model
+addMousePositionToDrawingIfMouseDown model =
     let
         drawing =
             case model.mouse.buttonDown of
@@ -976,10 +987,15 @@ clearDrawingIfFinished : Model -> Model
 clearDrawingIfFinished model =
     case model.mouse.buttonDown of
         NoMouseButton ->
-            { model | drawing = [], snappedDrawingPoints = [] }
+            model |> clearDrawing
 
         _ ->
             model
+
+
+clearDrawing : Model -> Model
+clearDrawing model =
+    { model | drawing = [], snappedDrawingPoints = [] }
 
 
 createWall : Position -> Position -> Maybe Wall
