@@ -76,8 +76,9 @@ $ ./scripts/build
     - Encode each event as a single character to minimise network usage
       - `^v<>`: moves
       - `s`: switch player
-- Prevent movement while switching maze
+- Fix board flipping stretching sideways when widescreen
 - Prevent drawing while switching maze
+- Allow the loser to finish the maze
 - Switch mazes from being a tuple to `mazes.active` and `mazes.inactive`
 - Call `switchMazes` from somewhere better
 - Count moves and wall hits and show this in the winning message

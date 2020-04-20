@@ -420,7 +420,12 @@ tryStartPlayerMove moveDirection model =
         Nothing ->
             case (model.mazes |> Tuple.first).stage of
                 PlayingStage ->
-                    startPlayerMove moveDirection model
+                    case model.switchingMaze of
+                        SwitchingMaze _ ->
+                            model
+
+                        NotSwitchingMaze ->
+                            startPlayerMove moveDirection model
 
                 DrawingStage ->
                     model
