@@ -64,6 +64,18 @@ $ ./scripts/build
 
 ### Todo
 
+- Backend to store game state
+- Sync game state with backend
+  - Instantly replay game history upon page reload part-way through a game (no animation)
+    - Figure out how to resume as the right player - some form of login?
+  - Receive an event from the opponent and apply it as normal interaction (with animation), while local interaction for the opponent is disabled
+    - Generate UUID to identify the game on init
+    - Poll for new version number of game state
+    - When there is a new version, fetch the full game state, and apply the new events
+    - Keep track of how many events have been applied (same as version number?), to determine which incoming events are new
+    - Encode each event as a single character to minimise network usage
+      - `^v<>`: moves
+      - `s`: switch player
 - Prevent movement while switching maze
 - Prevent drawing while switching maze
 - Switch mazes from being a tuple to `mazes.active` and `mazes.inactive`
@@ -72,6 +84,7 @@ $ ./scripts/build
 - Prevent touchscreen button lag
 - Verify maze is possible to win before leaving drawing stage
 - Allow changing grid size
+- Saving a maze to be able to reuse it
 - Fade in new sections of traversed path
 - Make wall removal hitbox rectangular, matching orientation
 - Unit tests
@@ -85,6 +98,4 @@ $ ./scripts/build
 - Deduplicate path travelled
 - Drag player to reposition
 - Different background colour for each maze within a game
-- Backend to store game state
-- Sync game state with backend
 - Compensate for overshooting the point of collision in `returnToOriginIfPathUnclear`
