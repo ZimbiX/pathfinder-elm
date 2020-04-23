@@ -64,7 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
-- Show appropriate popup message when loser finishes maze
+- Refactor to provide an event for the popup dismiss button
 - Backend to store game state
 - Sync game state with backend
   - Instantly replay game history upon page reload part-way through a game (no animation)

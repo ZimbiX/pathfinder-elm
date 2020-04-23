@@ -1270,8 +1270,31 @@ completeMazeDrawing model =
 endGameIfWon : Model -> Model
 endGameIfWon model =
     let
+        winMessage =
+            "You win! :D"
+
+        cameSecondMessage =
+            "You finished!"
+
+        message =
+            case inactiveMaze.stage of
+                DrawingStage ->
+                    "Error"
+
+                PlayingStage ->
+                    winMessage
+
+                FirstWinStage ->
+                    cameSecondMessage
+
         winPopup =
-            Just { messageLines = [ "You win! :D" ] }
+            Just { messageLines = [ message ] }
+
+        activeMaze =
+            model.mazes |> Tuple.first
+
+        inactiveMaze =
+            model.mazes |> Tuple.second
     in
     case (model.mazes |> Tuple.first).stage of
         DrawingStage ->
@@ -1279,8 +1302,8 @@ endGameIfWon model =
 
         PlayingStage ->
             if
-                ((model.mazes |> Tuple.first).currentMove == Nothing)
-                    && ((model.mazes |> Tuple.first).golds |> List.any (\gold -> gold == (model.mazes |> Tuple.first).position))
+                (activeMaze.currentMove == Nothing)
+                    && (activeMaze.golds |> List.any (\gold -> gold == activeMaze.position))
             then
                 { model
                     | mazes =
@@ -1288,7 +1311,7 @@ endGameIfWon model =
                             |> Tuple.mapFirst
                                 (\maze ->
                                     { maze
-                                        | walls = (model.mazes |> Tuple.first).walls |> revealAllWalls
+                                        | walls = activeMaze.walls |> revealAllWalls
                                         , stage = FirstWinStage
                                     }
                                 )
