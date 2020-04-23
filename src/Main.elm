@@ -14,6 +14,7 @@ import Html.Styled.Attributes exposing (css, draggable, href, src)
 import Html.Styled.Events exposing (on, onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy exposing (lazy, lazy2)
+import Http
 import Json.Decode
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
@@ -76,6 +77,7 @@ type alias Model =
     , snappedDrawingPoints : SnappedDrawingPoints
     , popup : Maybe Popup
     , switchingMaze : SwitchingMazeState
+    , gameStateVersion : Int
     }
 
 
@@ -184,8 +186,9 @@ init _ =
       , snappedDrawingPoints = []
       , popup = Nothing
       , switchingMaze = NotSwitchingMaze
+      , gameStateVersion = 0
       }
-    , Cmd.none
+    , requestGameStateVersion
     )
 
 
@@ -210,6 +213,7 @@ type Msg
     | MouseUpdated Mouse
     | DoneButtonPressed
     | DismissPopup
+    | GotGameStateVersionFromBackend (Result Http.Error String)
 
 
 type MoveDirection
@@ -269,6 +273,29 @@ update msg model =
                 |> dismissPopup
             , Cmd.none
             )
+
+        GotGameStateVersionFromBackend result ->
+            ( case result of
+                Ok gameStateVersionText ->
+                    case gameStateVersionText |> Debug.log "received gameStateVersion" |> String.toInt of
+                        Just gameStateVersion ->
+                            { model | gameStateVersion = gameStateVersion }
+
+                        Nothing ->
+                            gameStateVersionText |> Debug.log "Error converting received gameStateVersionText to int:" |> (\_ -> model)
+
+                Err err ->
+                    err |> Debug.log "Error receiving gameStateVersion:" |> (\_ -> model)
+              --, requestGameStateVersion
+            , Cmd.none
+            )
+
+
+requestGameStateVersion =
+    Http.get
+        { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?key=d&version"
+        , expect = Http.expectString GotGameStateVersionFromBackend
+        }
 
 
 mouseProcessorForStageInteractions : Stage -> (Model -> Model)
