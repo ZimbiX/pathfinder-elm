@@ -20,6 +20,8 @@ import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
 import List.Extra
 import Maybe.Extra
+import Process
+import Task
 
 
 
@@ -213,7 +215,9 @@ type Msg
     | MouseUpdated Mouse
     | DoneButtonPressed
     | DismissPopup
+    | RequestGameStateVersionFromBackend
     | GotGameStateVersionFromBackend (Result Http.Error String)
+    | GotGameStateContentFromBackend (Result Http.Error String)
 
 
 type MoveDirection
@@ -274,21 +278,42 @@ update msg model =
             , Cmd.none
             )
 
+        RequestGameStateVersionFromBackend ->
+            ( model, requestGameStateVersion )
+
         GotGameStateVersionFromBackend result ->
-            ( case result of
+            case result of
                 Ok gameStateVersionText ->
                     case gameStateVersionText |> Debug.log "received gameStateVersion" |> String.toInt of
                         Just gameStateVersion ->
-                            { model | gameStateVersion = gameStateVersion }
+                            if model.gameStateVersion == gameStateVersion then
+                                ( model
+                                , Process.sleep 1000 |> Task.perform (\_ -> RequestGameStateVersionFromBackend)
+                                )
+
+                            else
+                                ( { model | gameStateVersion = gameStateVersion }
+                                , requestGameStateContent
+                                )
 
                         Nothing ->
-                            gameStateVersionText |> Debug.log "Error converting received gameStateVersionText to int:" |> (\_ -> model)
+                            gameStateVersionText |> Debug.log "Error converting received gameStateVersionText to int" |> (\_ -> ( model, Cmd.none ))
 
                 Err err ->
-                    err |> Debug.log "Error receiving gameStateVersion:" |> (\_ -> model)
-              --, requestGameStateVersion
-            , Cmd.none
-            )
+                    err |> Debug.log "Error receiving gameStateVersion:" |> (\_ -> ( model, Cmd.none ))
+
+        GotGameStateContentFromBackend result ->
+            case result of
+                Ok gameStateContentText ->
+                    case gameStateContentText |> Debug.log "received gameStateContent" |> Json.Decode.decodeString gameStateContentResponseDecoder of
+                        Ok gameStateContent ->
+                            gameStateContent |> Debug.log "Decoded gameStateContentText" |> (\_ -> ( model, requestGameStateVersion ))
+
+                        Err err ->
+                            ( gameStateContentText, err ) |> Debug.log "Error converting received gameStateContentText to int" |> (\_ -> ( model, Cmd.none ))
+
+                Err err ->
+                    err |> Debug.log "Error receiving gameStateContent:" |> (\_ -> ( model, Cmd.none ))
 
 
 requestGameStateVersion =
@@ -296,6 +321,28 @@ requestGameStateVersion =
         { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?key=d&version"
         , expect = Http.expectString GotGameStateVersionFromBackend
         }
+
+
+requestGameStateContent =
+    Http.get
+        { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?key=d&latest"
+        , expect = Http.expectString GotGameStateContentFromBackend
+        }
+
+
+type alias GameStateContentResponse =
+    { id : String
+    , content : String
+    , version : Int
+    }
+
+
+gameStateContentResponseDecoder : Json.Decode.Decoder GameStateContentResponse
+gameStateContentResponseDecoder =
+    Json.Decode.map3 GameStateContentResponse
+        (Json.Decode.field "id" Json.Decode.string)
+        (Json.Decode.field "content" Json.Decode.string)
+        (Json.Decode.field "version" Json.Decode.int)
 
 
 mouseProcessorForStageInteractions : Stage -> (Model -> Model)
