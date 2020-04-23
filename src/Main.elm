@@ -265,7 +265,8 @@ update msg model =
             )
 
         DismissPopup ->
-            ( { model | popup = Nothing }
+            ( model
+                |> dismissPopup
             , Cmd.none
             )
 
@@ -453,7 +454,7 @@ finishPlayerMove model =
                                     }
                                 )
                 }
-                    |> startSwitchingMazes
+                    |> startSwitchingMazesIfOtherMazeNotWon
 
             else
                 let
@@ -607,10 +608,30 @@ dismissPopupIfEnterPressed : RawKey -> Model -> Model
 dismissPopupIfEnterPressed rawKey model =
     case Keyboard.anyKeyUpper rawKey of
         Just Enter ->
-            { model | popup = Nothing }
+            model |> dismissPopup
 
         _ ->
             model
+
+
+dismissPopup : Model -> Model
+dismissPopup model =
+    let
+        modelDismissed =
+            { model | popup = Nothing }
+
+        inactiveMaze =
+            Tuple.second model.mazes
+    in
+    case inactiveMaze.stage of
+        DrawingStage ->
+            modelDismissed
+
+        PlayingStage ->
+            modelDismissed |> startSwitchingMazes
+
+        FirstWinStage ->
+            modelDismissed
 
 
 switchMazeIfMPressed : RawKey -> Model -> Model
@@ -620,6 +641,23 @@ switchMazeIfMPressed rawKey model =
             model |> startSwitchingMazes
 
         _ ->
+            model
+
+
+startSwitchingMazesIfOtherMazeNotWon : Model -> Model
+startSwitchingMazesIfOtherMazeNotWon model =
+    let
+        inactiveMaze =
+            model.mazes |> Tuple.second
+    in
+    case inactiveMaze.stage of
+        DrawingStage ->
+            model |> startSwitchingMazes
+
+        PlayingStage ->
+            model |> startSwitchingMazes
+
+        FirstWinStage ->
             model
 
 
@@ -637,7 +675,7 @@ keepSwitchingMazes : Float -> Model -> Model
 keepSwitchingMazes deltaTime model =
     case model.switchingMaze of
         SwitchingMaze progressFraction ->
-            { model | switchingMaze = SwitchingMaze (min (progressFraction + ((deltaTime / 1000) / settings.mazeSwitching.animationDurationSeconds)) 1) |> Debug.log "switching progressFraction" }
+            { model | switchingMaze = SwitchingMaze (min (progressFraction + ((deltaTime / 1000) / settings.mazeSwitching.animationDurationSeconds)) 1) }
 
         NotSwitchingMaze ->
             model
@@ -1220,7 +1258,7 @@ completeMazeDrawing model =
                                 }
                             )
             }
-                |> startSwitchingMazes
+                |> startSwitchingMazesIfOtherMazeNotWon
 
         PlayingStage ->
             model

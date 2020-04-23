@@ -64,6 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
+- Show appropriate popup message when loser finishes maze
 - Backend to store game state
 - Sync game state with backend
   - Instantly replay game history upon page reload part-way through a game (no animation)
@@ -77,7 +78,6 @@ $ ./scripts/build
       - `^v<>`: moves
       - `s`: switch player
 - Fix board flipping stretching sideways when widescreen
-- Allow the loser to finish the maze
 - Switch mazes from being a tuple to `mazes.active` and `mazes.inactive`
 - Call `switchMazes` from somewhere better
 - Count moves and wall hits and show this in the winning message
