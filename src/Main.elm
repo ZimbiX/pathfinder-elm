@@ -190,7 +190,7 @@ init _ =
       , switchingMaze = NotSwitchingMaze
       , gameStateVersion = 0
       }
-    , requestGameStateVersion
+    , requestNewEvents 0
     )
 
 
@@ -215,9 +215,8 @@ type Msg
     | MouseUpdated Mouse
     | DoneButtonPressed
     | DismissPopup
-    | RequestGameStateVersionFromBackend
-    | GotGameStateVersionFromBackend (Result Http.Error String)
-    | GotGameStateContentFromBackend (Result Http.Error String)
+    | RequestNewEventsFromBackend
+    | GotEventsFromBackend (Result Http.Error String)
 
 
 type MoveDirection
@@ -278,71 +277,60 @@ update msg model =
             , Cmd.none
             )
 
-        RequestGameStateVersionFromBackend ->
-            ( model, requestGameStateVersion )
+        RequestNewEventsFromBackend ->
+            ( model, requestNewEvents model.gameStateVersion )
 
-        GotGameStateVersionFromBackend result ->
+        GotEventsFromBackend result ->
             case result of
-                Ok gameStateVersionText ->
-                    case gameStateVersionText |> Debug.log "received gameStateVersion" |> String.toInt of
-                        Just gameStateVersion ->
-                            if model.gameStateVersion == gameStateVersion then
-                                ( model
-                                , Process.sleep 1000 |> Task.perform (\_ -> RequestGameStateVersionFromBackend)
-                                )
+                Ok eventsResponse ->
+                    case eventsResponse |> Json.Decode.decodeString eventsDecoder of
+                        Ok events ->
+                            model |> applyNewEvents (events |> Debug.log "Decoded new events")
 
-                            else
-                                ( { model | gameStateVersion = gameStateVersion }
-                                , requestGameStateContent
-                                )
+                        Err decodeErr ->
+                            ( eventsResponse, decodeErr ) |> Debug.log "Error decoding received new events" |> (\_ -> ( model, Cmd.none ))
 
-                        Nothing ->
-                            gameStateVersionText |> Debug.log "Error converting received gameStateVersionText to int" |> (\_ -> ( model, Cmd.none ))
-
-                Err err ->
-                    err |> Debug.log "Error receiving gameStateVersion:" |> (\_ -> ( model, Cmd.none ))
-
-        GotGameStateContentFromBackend result ->
-            case result of
-                Ok gameStateContentText ->
-                    case gameStateContentText |> Debug.log "received gameStateContent" |> Json.Decode.decodeString gameStateContentResponseDecoder of
-                        Ok gameStateContent ->
-                            gameStateContent |> Debug.log "Decoded gameStateContentText" |> (\_ -> ( model, requestGameStateVersion ))
-
-                        Err err ->
-                            ( gameStateContentText, err ) |> Debug.log "Error converting received gameStateContentText to int" |> (\_ -> ( model, Cmd.none ))
-
-                Err err ->
-                    err |> Debug.log "Error receiving gameStateContent:" |> (\_ -> ( model, Cmd.none ))
+                Err requestErr ->
+                    requestErr |> Debug.log "Error from requesting new events" |> (\_ -> ( model, Cmd.none ))
 
 
-requestGameStateVersion =
+applyNewEvents : List EventResponse -> Model -> ( Model, Cmd Msg )
+applyNewEvents events model =
+    case List.Extra.last events of
+        Just latestEvent ->
+            ( { model | gameStateVersion = latestEvent.version }
+            , Process.sleep 100 |> Task.perform (\_ -> RequestNewEventsFromBackend)
+            )
+
+        Nothing ->
+            ( model
+            , Process.sleep 1000 |> Task.perform (\_ -> RequestNewEventsFromBackend)
+            )
+
+
+requestNewEvents afterVersion =
     Http.get
-        { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?key=d&version"
-        , expect = Http.expectString GotGameStateVersionFromBackend
+        { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?id=d&after=" ++ String.fromInt afterVersion
+        , expect = Http.expectString GotEventsFromBackend
         }
 
 
-requestGameStateContent =
-    Http.get
-        { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?key=d&latest"
-        , expect = Http.expectString GotGameStateContentFromBackend
-        }
-
-
-type alias GameStateContentResponse =
-    { id : String
-    , content : String
-    , version : Int
+type alias EventResponse =
+    { version : Int
+    , event : String
     }
 
 
-gameStateContentResponseDecoder : Json.Decode.Decoder GameStateContentResponse
-gameStateContentResponseDecoder =
-    Json.Decode.map3 GameStateContentResponse
-        (Json.Decode.field "id" Json.Decode.string)
-        (Json.Decode.field "content" Json.Decode.string)
+eventDecoder : Json.Decode.Decoder EventResponse
+eventDecoder =
+    Json.Decode.map2 EventResponse
         (Json.Decode.field "version" Json.Decode.int)
+        (Json.Decode.field "event" Json.Decode.string)
+
+
+eventsDecoder : Json.Decode.Decoder (List EventResponse)
+eventsDecoder =
+    Json.Decode.list eventDecoder
 
 
 mouseProcessorForStageInteractions : Stage -> (Model -> Model)

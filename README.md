@@ -64,7 +64,6 @@ $ ./scripts/build
 
 ### Todo
 
-- Prevent caching of HTTP requests - add header
 - Sync game state with backend
   - Instantly replay game history upon page reload part-way through a game (no animation)
     - Figure out how to resume as the right player - some form of login?
