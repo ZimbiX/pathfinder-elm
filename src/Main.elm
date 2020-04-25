@@ -336,24 +336,46 @@ type alias EventResponse =
 
 backendEventDecoder : Json.Decode.Decoder BackendEvent
 backendEventDecoder =
-    Json.Decode.string
+    let
+        decodeMoveLeft =
+            exactMatch (Json.Decode.field "name" Json.Decode.string) "MoveLeft" (Json.Decode.succeed MoveLeftBackendEvent)
+
+        decodeMoveRight =
+            exactMatch (Json.Decode.field "name" Json.Decode.string) "MoveRight" (Json.Decode.succeed MoveRightBackendEvent)
+
+        decodeMoveUp =
+            exactMatch (Json.Decode.field "name" Json.Decode.string) "MoveUp" (Json.Decode.succeed MoveUpBackendEvent)
+
+        decodeMoveDown =
+            exactMatch (Json.Decode.field "name" Json.Decode.string) "MoveDown" (Json.Decode.succeed MoveDownBackendEvent)
+    in
+    Json.Decode.oneOf
+        [ decodeMoveLeft
+        , decodeMoveRight
+        , decodeMoveUp
+        , decodeMoveDown
+
+        --, decodeWithVal
+        ]
+
+
+
+--decodeWithVal =
+--    exactMatch (Decode.field "name" Decode.string)
+--        "providerWithVal"
+--        (Decode.map ProviderWithVal <| Decode.field "value" Decode.string)
+
+
+exactMatch : Json.Decode.Decoder String -> String -> Json.Decode.Decoder a -> Json.Decode.Decoder a
+exactMatch matchDecoder match dec =
+    matchDecoder
         |> Json.Decode.andThen
-            (\eventName ->
-                case eventName of
-                    "MoveLeft" ->
-                        Json.Decode.succeed MoveLeftBackendEvent
+            (\str ->
+                if str == match then
+                    dec
 
-                    "MoveRight" ->
-                        Json.Decode.succeed MoveLeftBackendEvent
-
-                    "MoveUp" ->
-                        Json.Decode.succeed MoveUpBackendEvent
-
-                    "MoveDown" ->
-                        Json.Decode.succeed MoveDownBackendEvent
-
-                    _ ->
-                        Json.Decode.fail ("Unknown event: " ++ eventName)
+                else
+                    Json.Decode.fail <| "[exactMatch] tgt: " ++ match ++ " /= " ++ str
             )
 
 

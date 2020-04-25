@@ -40,8 +40,13 @@ function get_events_after_version() {
   $stmt->execute();
   $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
+  function row_with_decoded_event($row) {
+    $row["event"] = json_decode($row["event"]);
+    return $row;
+  }
+
   if ($result) {
-    echo json_encode($result);
+    echo json_encode(array_map("row_with_decoded_event", $result));
   } else {
     echo json_encode([]);
   }
