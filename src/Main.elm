@@ -80,6 +80,7 @@ type alias Model =
     , popup : Maybe Popup
     , switchingMaze : SwitchingMazeState
     , gameStateVersion : Int
+    , queuedEventsForApplication : List BackendEvent
     }
 
 
@@ -176,6 +177,13 @@ type SwitchingMazeState
     | NotSwitchingMaze
 
 
+type BackendEvent
+    = MoveLeftBackendEvent
+    | MoveRightBackendEvent
+    | MoveUpBackendEvent
+    | MoveDownBackendEvent
+
+
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { mazes =
@@ -189,6 +197,7 @@ init _ =
       , popup = Nothing
       , switchingMaze = NotSwitchingMaze
       , gameStateVersion = 0
+      , queuedEventsForApplication = []
       }
     , requestNewEvents 0
     )
@@ -285,7 +294,7 @@ update msg model =
                 Ok eventsResponse ->
                     case eventsResponse |> Json.Decode.decodeString eventsDecoder of
                         Ok events ->
-                            model |> applyNewEvents (events |> Debug.log "Decoded new events")
+                            model |> queueNewEventsForApplication (events |> Debug.log "Decoded new events")
 
                         Err decodeErr ->
                             ( eventsResponse, decodeErr ) |> Debug.log "Error decoding received new events" |> (\_ -> ( model, Cmd.none ))
@@ -294,11 +303,15 @@ update msg model =
                     requestErr |> Debug.log "Error from requesting new events" |> (\_ -> ( model, Cmd.none ))
 
 
-applyNewEvents : List EventResponse -> Model -> ( Model, Cmd Msg )
-applyNewEvents events model =
-    case List.Extra.last events of
+queueNewEventsForApplication : List EventResponse -> Model -> ( Model, Cmd Msg )
+queueNewEventsForApplication eventsResponse model =
+    let
+        events =
+            List.map (\e -> e.event) eventsResponse
+    in
+    case List.Extra.last eventsResponse of
         Just latestEvent ->
-            ( { model | gameStateVersion = latestEvent.version }
+            ( { model | gameStateVersion = latestEvent.version, queuedEventsForApplication = List.concat [ model.queuedEventsForApplication, events ] }
             , Process.sleep 100 |> Task.perform (\_ -> RequestNewEventsFromBackend)
             )
 
@@ -317,15 +330,38 @@ requestNewEvents afterVersion =
 
 type alias EventResponse =
     { version : Int
-    , event : String
+    , event : BackendEvent
     }
+
+
+backendEventDecoder : Json.Decode.Decoder BackendEvent
+backendEventDecoder =
+    Json.Decode.string
+        |> Json.Decode.andThen
+            (\eventName ->
+                case eventName of
+                    "MoveLeft" ->
+                        Json.Decode.succeed MoveLeftBackendEvent
+
+                    "MoveRight" ->
+                        Json.Decode.succeed MoveLeftBackendEvent
+
+                    "MoveUp" ->
+                        Json.Decode.succeed MoveUpBackendEvent
+
+                    "MoveDown" ->
+                        Json.Decode.succeed MoveDownBackendEvent
+
+                    _ ->
+                        Json.Decode.fail ("Unknown event: " ++ eventName)
+            )
 
 
 eventDecoder : Json.Decode.Decoder EventResponse
 eventDecoder =
     Json.Decode.map2 EventResponse
         (Json.Decode.field "version" Json.Decode.int)
-        (Json.Decode.field "event" Json.Decode.string)
+        (Json.Decode.field "event" backendEventDecoder)
 
 
 eventsDecoder : Json.Decode.Decoder (List EventResponse)
