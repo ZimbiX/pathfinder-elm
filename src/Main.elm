@@ -270,6 +270,7 @@ update msg model =
 
         Tick deltaTime ->
             ( model
+                |> applyNextEventFromServerIfReady
                 |> updatePlayerPosition deltaTime
                 |> returnToOriginIfPathUnclear
                 |> finishPlayerMove
@@ -308,13 +309,42 @@ update msg model =
                 Ok eventsResponse ->
                     case eventsResponse |> Json.Decode.decodeString eventsDecoder of
                         Ok events ->
-                            model |> queueNewEventsForApplication (events |> Debug.log "Decoded new events")
+                            model
+                                |> queueNewEventsForApplication (events |> Debug.log "Decoded new events")
 
                         Err decodeErr ->
                             ( eventsResponse, decodeErr ) |> Debug.log "Error decoding received new events" |> (\_ -> ( model, Cmd.none ))
 
                 Err requestErr ->
                     requestErr |> Debug.log "Error from requesting new events" |> (\_ -> ( model, Cmd.none ))
+
+
+applyNextEventFromServerIfReady : Model -> Model
+applyNextEventFromServerIfReady model =
+    case List.Extra.uncons model.queuedEventsForApplication |> Debug.log "applyNextEventFromServerIfReady" of
+        Just ( firstEvent, laterEvents ) ->
+            (case firstEvent of
+                MazeDrawn mazeBackend ->
+                    { model
+                        | mazes =
+                            model.mazes
+                                |> Tuple.mapFirst
+                                    (\maze ->
+                                        { maze
+                                            | golds = mazeBackend.golds
+
+                                            --walls
+                                        }
+                                    )
+                    }
+
+                unhandledEvent ->
+                    Debug.log "Unhandled application of event" unhandledEvent |> (\_ -> model)
+            )
+                |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
+
+        Nothing ->
+            model
 
 
 queueNewEventsForApplication : List EventResponse -> Model -> ( Model, Cmd Msg )
@@ -326,11 +356,13 @@ queueNewEventsForApplication eventsResponse model =
     case List.Extra.last eventsResponse of
         Just latestEvent ->
             ( { model | gameStateVersion = latestEvent.version, queuedEventsForApplication = List.concat [ model.queuedEventsForApplication, events ] }
+              --, Cmd.none
             , Process.sleep 100 |> Task.perform (\_ -> RequestNewEventsFromBackend)
             )
 
         Nothing ->
             ( model
+              --, Cmd.none
             , Process.sleep 1000 |> Task.perform (\_ -> RequestNewEventsFromBackend)
             )
 
@@ -1511,6 +1543,7 @@ subscriptions model =
             ((model.mazes |> Tuple.first).currentMove /= Nothing)
                 || wallsAreAnimating (model.mazes |> Tuple.first).walls
                 || (model.switchingMaze /= NotSwitchingMaze)
+                || not (List.isEmpty model.queuedEventsForApplication)
 
         animationSubscription =
             if animationActive then
