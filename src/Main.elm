@@ -128,6 +128,13 @@ type alias Wall =
     }
 
 
+type alias WallBackend =
+    { column : Float
+    , row : Float
+    , orientation : Orientation
+    }
+
+
 type Orientation
     = Horizontal
     | Vertical
@@ -177,8 +184,15 @@ type SwitchingMazeState
     | NotSwitchingMaze
 
 
+type alias MazeBackend =
+    { walls : List WallBackend
+    , golds : List Gold
+    }
+
+
 type BackendEvent
-    = MoveLeftBackendEvent
+    = MazeDrawn MazeBackend
+    | MoveLeftBackendEvent
     | MoveRightBackendEvent
     | MoveUpBackendEvent
     | MoveDownBackendEvent
@@ -348,22 +362,46 @@ backendEventDecoder =
 
         decodeMoveDown =
             exactMatch (Json.Decode.field "name" Json.Decode.string) "MoveDown" (Json.Decode.succeed MoveDownBackendEvent)
+
+        decodeMazeDrawn =
+            exactMatch
+                (Json.Decode.field "name" Json.Decode.string)
+                "MazeDrawn"
+                (Json.Decode.field "data"
+                    (Json.Decode.map
+                        MazeDrawn
+                        (Json.Decode.map2
+                            MazeBackend
+                            (Json.Decode.field "walls"
+                                (Json.Decode.list
+                                    (Json.Decode.map3
+                                        WallBackend
+                                        (Json.Decode.field "column" Json.Decode.float)
+                                        (Json.Decode.field "row" Json.Decode.float)
+                                        (Json.Decode.field "orientation" orientationDecoder)
+                                    )
+                                )
+                            )
+                            (Json.Decode.field "golds"
+                                (Json.Decode.list
+                                    (Json.Decode.map2
+                                        Position
+                                        (Json.Decode.field "column" Json.Decode.float)
+                                        (Json.Decode.field "row" Json.Decode.float)
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
     in
     Json.Decode.oneOf
         [ decodeMoveLeft
         , decodeMoveRight
         , decodeMoveUp
         , decodeMoveDown
-
-        --, decodeWithVal
+        , decodeMazeDrawn
         ]
-
-
-
---decodeWithVal =
---    exactMatch (Decode.field "name" Decode.string)
---        "providerWithVal"
---        (Decode.map ProviderWithVal <| Decode.field "value" Decode.string)
 
 
 exactMatch : Json.Decode.Decoder String -> String -> Json.Decode.Decoder a -> Json.Decode.Decoder a
@@ -376,6 +414,23 @@ exactMatch matchDecoder match dec =
 
                 else
                     Json.Decode.fail <| "[exactMatch] tgt: " ++ match ++ " /= " ++ str
+            )
+
+
+orientationDecoder : Json.Decode.Decoder Orientation
+orientationDecoder =
+    Json.Decode.string
+        |> Json.Decode.andThen
+            (\orientation ->
+                case orientation of
+                    "Vertical" ->
+                        Json.Decode.succeed Vertical
+
+                    "Horizontal" ->
+                        Json.Decode.succeed Horizontal
+
+                    _ ->
+                        Json.Decode.fail <| "Orientation decoding failed: " ++ orientation
             )
 
 
