@@ -258,12 +258,16 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         MoveButtonPressed moveDirection ->
-            ( tryStartPlayerMove moveDirection model, Cmd.none )
+            model
+                |> tryStartPlayerMove moveDirection
+                |> submitQueuedEvents
 
         KeyDown rawKey ->
             case moveDirectionFromKeyDown rawKey of
                 Just moveDirection ->
-                    ( tryStartPlayerMove moveDirection model, Cmd.none )
+                    model
+                        |> tryStartPlayerMove moveDirection
+                        |> submitQueuedEvents
 
                 Nothing ->
                     model
@@ -661,7 +665,12 @@ submitQueuedEvents model =
         newVersion =
             model.gameStateVersion + List.length events
     in
-    ( { model | gameStateVersion = newVersion }, Cmd.batch requests )
+    ( { model
+        | gameStateVersion = newVersion
+        , eventsQueuedForSubmission = []
+      }
+    , Cmd.batch requests
+    )
 
 
 mouseProcessorForStageInteractions : Stage -> (Model -> Model)
@@ -1179,88 +1188,55 @@ moveDirectionFromKeyDown rawKey =
 startPlayerMove : MoveDirection -> Model -> Model
 startPlayerMove moveDirection model =
     let
+        activeMaze =
+            model.mazes |> Tuple.first
+
         origin =
-            { column = (model.mazes |> Tuple.first).position.column, row = (model.mazes |> Tuple.first).position.row }
+            { column = activeMaze.position.column
+            , row = activeMaze.position.row
+            }
+
+        moveToTarget target backendEvent =
+            { model
+                | mazes =
+                    model.mazes
+                        |> Tuple.mapFirst
+                            (\maze ->
+                                { maze
+                                    | currentMove =
+                                        Just
+                                            { direction = moveDirection
+                                            , origin = origin
+                                            , target = target
+                                            , reversing = False
+                                            }
+                                }
+                            )
+                , eventsQueuedForSubmission = List.concat [ model.eventsQueuedForSubmission, [ backendEvent ] ]
+            }
     in
     case moveDirection of
         MoveRight ->
-            { model
-                | mazes =
-                    model.mazes
-                        |> Tuple.mapFirst
-                            (\maze ->
-                                { maze
-                                    | currentMove =
-                                        Just
-                                            { direction = moveDirection
-                                            , origin = origin
-                                            , target = { origin | column = origin.column + 1 }
-                                            , reversing = False
-                                            }
-                                }
-                            )
-            }
+            moveToTarget { origin | column = origin.column + 1 } MoveRightBackendEvent
 
         MoveLeft ->
-            { model
-                | mazes =
-                    model.mazes
-                        |> Tuple.mapFirst
-                            (\maze ->
-                                { maze
-                                    | currentMove =
-                                        Just
-                                            { direction = moveDirection
-                                            , origin = origin
-                                            , target = { origin | column = origin.column - 1 }
-                                            , reversing = False
-                                            }
-                                }
-                            )
-            }
+            moveToTarget { origin | column = origin.column - 1 } MoveLeftBackendEvent
 
         MoveUp ->
-            { model
-                | mazes =
-                    model.mazes
-                        |> Tuple.mapFirst
-                            (\maze ->
-                                { maze
-                                    | currentMove =
-                                        Just
-                                            { direction = moveDirection
-                                            , origin = origin
-                                            , target = { origin | row = origin.row - 1 }
-                                            , reversing = False
-                                            }
-                                }
-                            )
-            }
+            moveToTarget { origin | row = origin.row - 1 } MoveUpBackendEvent
 
         MoveDown ->
-            { model
-                | mazes =
-                    model.mazes
-                        |> Tuple.mapFirst
-                            (\maze ->
-                                { maze
-                                    | currentMove =
-                                        Just
-                                            { direction = moveDirection
-                                            , origin = origin
-                                            , target = { origin | row = origin.row + 1 }
-                                            , reversing = False
-                                            }
-                                }
-                            )
-            }
+            moveToTarget { origin | row = origin.row + 1 } MoveDownBackendEvent
 
 
 updateWallsOpacity : Float -> Model -> Model
 updateWallsOpacity deltaTime model =
     let
+        activeMaze =
+            model.mazes |> Tuple.first
+
         walls =
-            List.map (updateWallOpacity deltaTime) (model.mazes |> Tuple.first).walls
+            List.map (updateWallOpacity deltaTime) activeMaze.walls
     in
     { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = walls }) }
 

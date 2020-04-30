@@ -6,10 +6,10 @@
 - [Elm](#elm)
 - [History](#history)
 - [Development](#development)
-    - [Dependencies](#dependencies)
-    - [Run](#run)
-    - [Build](#build)
-    - [Todo](#todo)
+  - [Dependencies](#dependencies)
+  - [Run](#run)
+  - [Build](#build)
+  - [Todo](#todo)
 
 <!-- /MarkdownTOC -->
 
@@ -65,6 +65,8 @@ $ ./scripts/build
 ### Todo
 
 - Sync game state with backend
+  - Queue events with their version number
+  - **Prevent sending MazeDrawn event when applying received event**
   - Instantly replay game history upon page reload part-way through a game (no animation)
     - Figure out how to resume as the right player - some form of login?
   - Receive an event from the opponent and apply it as normal interaction (with animation), while local interaction for the opponent is disabled
