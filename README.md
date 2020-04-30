@@ -6,10 +6,10 @@
 - [Elm](#elm)
 - [History](#history)
 - [Development](#development)
-  - [Dependencies](#dependencies)
-  - [Run](#run)
-  - [Build](#build)
-  - [Todo](#todo)
+    - [Dependencies](#dependencies)
+    - [Run](#run)
+    - [Build](#build)
+    - [Todo](#todo)
 
 <!-- /MarkdownTOC -->
 
@@ -65,17 +65,13 @@ $ ./scripts/build
 ### Todo
 
 - Sync game state with backend
-  - Queue events with their version number
-  - **Prevent sending MazeDrawn event when applying received event**
-  - Instantly replay game history upon page reload part-way through a game (no animation)
-    - Figure out how to resume as the right player - some form of login?
-  - Receive an event from the opponent and apply it as normal interaction (with animation), while local interaction for the opponent is disabled
-    - Generate UUID to identify the game on init
-    - Apply the new events after receiving updated game state
-    - Keep track of how many events have been applied (same as version number?), to determine which incoming events are new
-    - Encode each event as a single character to minimise network usage
-      - `^v<>`: moves
-      - `s`: switch player
+    + Deal with sending/receiving events out of order
+        * Queue events with their version number
+        * When receiving events, only apply events if they are the next expected version, and sort the events queued for application by version upon receiving more
+    + Instantly replay game history upon page reload part-way through a game (no animation)
+        * Figure out how to resume as the right player - some form of login?
+    + Receive an event from the opponent and apply it as normal interaction (with animation), while local interaction for the opponent is disabled
+    + Generate UUID to identify the game on init
 - Refactor to provide an event for the popup dismiss button
 - Fix board flipping stretching sideways when widescreen
 - Switch mazes from being a tuple to `mazes.active` and `mazes.inactive`
