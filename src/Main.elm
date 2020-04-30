@@ -16,12 +16,14 @@ import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy exposing (lazy, lazy2)
 import Http
 import Json.Decode
+import Json.Encode
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
 import List.Extra
 import Maybe.Extra
 import Process
 import Task
+import Url
 
 
 
@@ -81,6 +83,7 @@ type alias Model =
     , switchingMaze : SwitchingMazeState
     , gameStateVersion : Int
     , queuedEventsForApplication : List BackendEvent
+    , eventsQueuedForSubmission : List BackendEvent
     }
 
 
@@ -212,6 +215,7 @@ init _ =
       , switchingMaze = NotSwitchingMaze
       , gameStateVersion = 0
       , queuedEventsForApplication = []
+      , eventsQueuedForSubmission = []
       }
     , requestNewEvents 0
     )
@@ -240,6 +244,7 @@ type Msg
     | DismissPopup
     | RequestNewEventsFromBackend
     | GotEventsFromBackend (Result Http.Error String)
+    | SentEventToBackend (Result Http.Error String)
 
 
 type MoveDirection
@@ -261,12 +266,11 @@ update msg model =
                     ( tryStartPlayerMove moveDirection model, Cmd.none )
 
                 Nothing ->
-                    ( model
+                    model
                         |> completeMazeDrawingIfEnterPressed rawKey
                         |> dismissPopupIfEnterPressed rawKey
                         |> switchMazeIfMPressed rawKey
-                    , Cmd.none
-                    )
+                        |> submitQueuedEvents
 
         Tick deltaTime ->
             ( model
@@ -291,9 +295,9 @@ update msg model =
             )
 
         DoneButtonPressed ->
-            ( completeMazeDrawing model
-            , Cmd.none
-            )
+            model
+                |> completeMazeDrawing
+                |> submitQueuedEvents
 
         DismissPopup ->
             ( model
@@ -317,6 +321,14 @@ update msg model =
 
                 Err requestErr ->
                     requestErr |> Debug.log "Error from requesting new events" |> (\_ -> ( model, Cmd.none ))
+
+        SentEventToBackend result ->
+            case result of
+                Ok submissionResponse ->
+                    submissionResponse |> Debug.log "Submitted event" |> (\_ -> ( model, Cmd.none ))
+
+                Err requestErr ->
+                    requestErr |> Debug.log "Error submitting event" |> (\_ -> ( model, Cmd.none ))
 
 
 applyNextEventFromServerIfReady : Model -> Model
@@ -382,6 +394,18 @@ wallsFromBackendWalls backendWalls =
             }
         )
         backendWalls
+
+
+backendWallsFromWalls : List Wall -> List WallBackend
+backendWallsFromWalls walls =
+    List.map
+        (\wall ->
+            { column = wall.column
+            , row = wall.row
+            , orientation = wall.orientation
+            }
+        )
+        walls
 
 
 queueNewEventsForApplication : List EventResponse -> Model -> ( Model, Cmd Msg )
@@ -513,6 +537,131 @@ eventDecoder =
 eventsDecoder : Json.Decode.Decoder (List EventResponse)
 eventsDecoder =
     Json.Decode.list eventDecoder
+
+
+moveEventEncoder : MoveDirection -> Json.Encode.Value
+moveEventEncoder direction =
+    let
+        name =
+            case direction of
+                MoveLeft ->
+                    "MoveLeft"
+
+                MoveRight ->
+                    "MoveRight"
+
+                MoveUp ->
+                    "MoveUp"
+
+                MoveDown ->
+                    "MoveDown"
+    in
+    Json.Encode.object
+        [ ( "name", Json.Encode.string name )
+        , ( "data", Json.Encode.null )
+        ]
+
+
+mazeDrawnEventEncoder : MazeBackend -> Json.Encode.Value
+mazeDrawnEventEncoder mazeBackend =
+    Json.Encode.object
+        [ ( "name", Json.Encode.string "MazeDrawn" )
+        , ( "data"
+          , Json.Encode.object
+                [ ( "walls"
+                  , Json.Encode.list
+                        (\wall ->
+                            let
+                                orientation =
+                                    case wall.orientation of
+                                        Horizontal ->
+                                            "Horizontal"
+
+                                        Vertical ->
+                                            "Vertical"
+                            in
+                            Json.Encode.object
+                                [ ( "row", Json.Encode.float wall.row )
+                                , ( "column", Json.Encode.float wall.column )
+                                , ( "orientation", Json.Encode.string orientation )
+                                ]
+                        )
+                        mazeBackend.walls
+                  )
+                , ( "golds"
+                  , Json.Encode.list
+                        (\gold ->
+                            Json.Encode.object
+                                [ ( "row", Json.Encode.float gold.row )
+                                , ( "column", Json.Encode.float gold.column )
+                                ]
+                        )
+                        mazeBackend.golds
+                  )
+                ]
+          )
+        ]
+
+
+formUrlencoded : List ( String, String ) -> String
+formUrlencoded object =
+    object
+        |> List.map
+            (\( name, value ) ->
+                Url.percentEncode name
+                    ++ "="
+                    ++ Url.percentEncode value
+            )
+        |> String.join "&"
+
+
+submitEvent : Int -> BackendEvent -> Cmd Msg
+submitEvent version event =
+    let
+        encodedEvent =
+            case event of
+                MazeDrawn mazeBackend ->
+                    mazeDrawnEventEncoder mazeBackend
+
+                MoveLeftBackendEvent ->
+                    moveEventEncoder MoveLeft
+
+                MoveRightBackendEvent ->
+                    moveEventEncoder MoveRight
+
+                MoveUpBackendEvent ->
+                    moveEventEncoder MoveUp
+
+                MoveDownBackendEvent ->
+                    moveEventEncoder MoveDown
+
+        body =
+            [ ( "id", "d" )
+            , ( "version", String.fromInt version )
+            , ( "event", Json.Encode.encode 0 encodedEvent )
+            ]
+    in
+    Http.post
+        { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php"
+        , body = body |> formUrlencoded |> Http.stringBody "application/x-www-form-urlencoded"
+        , expect = Http.expectString SentEventToBackend
+        }
+
+
+submitQueuedEvents : Model -> ( Model, Cmd Msg )
+submitQueuedEvents model =
+    let
+        -- TODO: Handle version iterating to allow submitting multiple events
+        events =
+            model.eventsQueuedForSubmission
+
+        requests =
+            List.map (submitEvent newVersion) events
+
+        newVersion =
+            model.gameStateVersion + List.length events
+    in
+    ( { model | gameStateVersion = newVersion }, Cmd.batch requests )
 
 
 mouseProcessorForStageInteractions : Stage -> (Model -> Model)
@@ -1502,7 +1651,11 @@ withinBoard position =
 
 completeMazeDrawing : Model -> Model
 completeMazeDrawing model =
-    case (model.mazes |> Tuple.first).stage of
+    let
+        activeMaze =
+            model.mazes |> Tuple.first
+    in
+    case activeMaze.stage of
         DrawingStage ->
             { model
                 | mazes =
@@ -1510,11 +1663,20 @@ completeMazeDrawing model =
                         |> Tuple.mapFirst
                             (\maze ->
                                 { maze
-                                    | walls = (model.mazes |> Tuple.first).walls |> hideAllWalls
+                                    | walls = activeMaze.walls |> hideAllWalls
                                     , stage = PlayingStage
-                                    , pathTravelled = [ (model.mazes |> Tuple.first).position ]
+                                    , pathTravelled = [ activeMaze.position ]
                                 }
                             )
+                , eventsQueuedForSubmission =
+                    List.concat
+                        [ model.eventsQueuedForSubmission
+                        , [ MazeDrawn
+                                { walls = activeMaze.walls |> backendWallsFromWalls
+                                , golds = activeMaze.golds
+                                }
+                          ]
+                        ]
             }
                 |> startSwitchingMazesIfOtherMazeNotWon
 
