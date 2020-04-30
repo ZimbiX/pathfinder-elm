@@ -277,7 +277,7 @@ update msg model =
                 |> endGameIfWon
                 |> updateWallsOpacity deltaTime
                 |> keepSwitchingMazes deltaTime
-                |> finishSwitchingMazes
+                |> swapMazesIfFinishedSwitching
             , Cmd.none
             )
 
@@ -323,28 +323,65 @@ applyNextEventFromServerIfReady : Model -> Model
 applyNextEventFromServerIfReady model =
     case List.Extra.uncons model.queuedEventsForApplication |> Debug.log "applyNextEventFromServerIfReady" of
         Just ( firstEvent, laterEvents ) ->
-            (case firstEvent of
+            let
+                moveIfReady direction =
+                    if playerCanStartMove model then
+                        model
+                            |> startPlayerMove direction
+                            |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
+
+                    else
+                        model
+            in
+            case firstEvent of
                 MazeDrawn mazeBackend ->
                     { model
-                        | mazes =
+                        | queuedEventsForApplication = laterEvents
+                        , mazes =
                             model.mazes
                                 |> Tuple.mapFirst
                                     (\maze ->
                                         { maze
                                             | golds = mazeBackend.golds
-
-                                            --walls
+                                            , walls = mazeBackend.walls |> wallsFromBackendWalls
                                         }
                                     )
                     }
+                        |> completeMazeDrawing
+                        |> swapMazes
 
-                unhandledEvent ->
-                    Debug.log "Unhandled application of event" unhandledEvent |> (\_ -> model)
-            )
-                |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
+                MoveLeftBackendEvent ->
+                    moveIfReady MoveLeft
 
+                MoveRightBackendEvent ->
+                    moveIfReady MoveRight
+
+                MoveUpBackendEvent ->
+                    moveIfReady MoveUp
+
+                MoveDownBackendEvent ->
+                    moveIfReady MoveDown
+
+        --unhandledEvent ->
+        --    Debug.log "Unhandled application of event" unhandledEvent
+        --        |> (\_ -> model)
+        --        |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
         Nothing ->
             model
+
+
+wallsFromBackendWalls : List WallBackend -> List Wall
+wallsFromBackendWalls backendWalls =
+    List.map
+        (\backEndWall ->
+            { column = backEndWall.column
+            , row = backEndWall.row
+            , orientation = backEndWall.orientation
+            , hidden = True
+            , opacity = 0
+            }
+        )
+        backendWalls
 
 
 queueNewEventsForApplication : List EventResponse -> Model -> ( Model, Cmd Msg )
@@ -619,27 +656,36 @@ degreesFromRadians angleRadians =
     fractionalModBy 360 (360 + (angleRadians |> Debug.log "radians") * (180 / pi))
 
 
-tryStartPlayerMove : MoveDirection -> Model -> Model
-tryStartPlayerMove moveDirection model =
+playerCanStartMove : Model -> Bool
+playerCanStartMove model =
     case (model.mazes |> Tuple.first).currentMove of
         Just _ ->
-            model
+            False
 
         Nothing ->
             case (model.mazes |> Tuple.first).stage of
                 PlayingStage ->
                     case model.switchingMaze of
                         SwitchingMaze _ ->
-                            model
+                            False
 
                         NotSwitchingMaze ->
-                            startPlayerMove moveDirection model
+                            True
 
                 DrawingStage ->
-                    model
+                    False
 
                 FirstWinStage ->
-                    model
+                    False
+
+
+tryStartPlayerMove : MoveDirection -> Model -> Model
+tryStartPlayerMove moveDirection model =
+    if playerCanStartMove model then
+        model |> startPlayerMove moveDirection
+
+    else
+        model
 
 
 finishPlayerMove : Model -> Model
@@ -888,24 +934,29 @@ keepSwitchingMazes deltaTime model =
             model
 
 
-finishSwitchingMazes : Model -> Model
-finishSwitchingMazes model =
+swapMazesIfFinishedSwitching : Model -> Model
+swapMazesIfFinishedSwitching model =
     case model.switchingMaze of
         SwitchingMaze progressFraction ->
             if progressFraction == 1 then
-                { model
-                    | switchingMaze = NotSwitchingMaze
-                    , mazes =
-                        ( model.mazes |> Tuple.second
-                        , model.mazes |> Tuple.first
-                        )
-                }
+                model |> swapMazes
 
             else
                 model
 
         NotSwitchingMaze ->
             model
+
+
+swapMazes : Model -> Model
+swapMazes model =
+    { model
+        | switchingMaze = NotSwitchingMaze
+        , mazes =
+            ( model.mazes |> Tuple.second
+            , model.mazes |> Tuple.first
+            )
+    }
 
 
 hideAllWalls : Walls -> Walls
