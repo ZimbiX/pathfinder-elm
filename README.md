@@ -66,7 +66,8 @@ $ ./scripts/build
 
 - Sync game state with backend
     + Deal with sending/receiving events out of order
-        * When receiving events, only apply events if they are the next expected version, and sort the events queued for application by version upon receiving more
+        * Make backend only reply with contiguous events
+        * **When receiving events, only apply events if they are the next expected version**, ~~and sort the events queued for application by version upon receiving more~~
     + Instantly replay game history upon page reload part-way through a game (no animation)
         * Figure out how to resume as the right player - some form of login?
     + Receive an event from the opponent and apply it as normal interaction (with animation), while local interaction for the opponent is disabled

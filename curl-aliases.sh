@@ -1,4 +1,4 @@
-id=d
+id=g
 
 reset() {
   curl -sSf 'www.zimbico.net/pathfinder-elm-backend/db-setup.php?reset'

@@ -40,6 +40,7 @@ settings =
         { delaySeconds = 0.2
         , animationDurationSeconds = 0.8
         }
+    , gameId = "g"
     }
 
 
@@ -354,12 +355,15 @@ applyNextEventFromServerIfReady model =
 
                     else
                         model
+
+                --expectedNextVersion =
+                --    model.gameStateVersion + 1
             in
+            --if firstEvent.version == expectedNextVersion then
             case firstEvent.event of
                 MazeDrawn mazeBackend ->
                     { model
-                        | queuedEventsForApplication = laterEvents
-                        , mazes =
+                        | mazes =
                             model.mazes
                                 |> Tuple.mapFirst
                                     (\maze ->
@@ -371,6 +375,7 @@ applyNextEventFromServerIfReady model =
                     }
                         |> completeMazeDrawing
                         |> swapMazes
+                        |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
 
                 MoveLeftBackendEvent ->
                     moveIfReady MoveLeft
@@ -388,6 +393,9 @@ applyNextEventFromServerIfReady model =
         --    Debug.log "Unhandled application of event" unhandledEvent
         --        |> (\_ -> model)
         --        |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
+        --else
+        --    Debug.log ("Warning: Unexpected event version: " ++ String.fromInt firstEvent.version ++ " /= " ++ String.fromInt expectedNextVersion) ""
+        --        |> (\_ -> model)
         Nothing ->
             model
 
@@ -428,7 +436,12 @@ queueNewEventsForApplication events model =
     in
     case List.Extra.last events of
         Just latestEvent ->
-            ( { model | gameStateVersion = latestEvent.version, queuedEventsForApplication = queuedEventsForApplication }
+            ( { model
+                | gameStateVersion =
+                    latestEvent.version
+                        |> Debug.log "updated gameStateVersion to reflect version of latest event in queuedEventsForApplication"
+                , queuedEventsForApplication = queuedEventsForApplication
+              }
               --, Cmd.none
             , Process.sleep 100 |> Task.perform (\_ -> RequestNewEventsFromBackend)
             )
@@ -442,7 +455,7 @@ queueNewEventsForApplication events model =
 
 requestNewEvents afterVersion =
     Http.get
-        { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?id=d&after=" ++ String.fromInt afterVersion
+        { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?id=" ++ settings.gameId ++ "&after=" ++ String.fromInt afterVersion
         , expect = Http.expectString GotEventsFromBackend
         }
 
@@ -642,7 +655,7 @@ submitEvent versionedEvent =
                     moveEventEncoder MoveDown
 
         body =
-            [ ( "id", "d" )
+            [ ( "id", settings.gameId )
             , ( "version", String.fromInt versionedEvent.version )
             , ( "event", Json.Encode.encode 0 encodedEvent )
             ]
@@ -1210,10 +1223,20 @@ startPlayerMove moveDirection model =
 
                 versionedEvent =
                     { event = backendEvent, version = model.gameStateVersion + List.length model.eventsQueuedForSubmission + 1 }
+
+                isApplyingServerEvent =
+                    not (List.isEmpty model.queuedEventsForApplication)
+
+                eventsQueuedForSubmission =
+                    if isApplyingServerEvent then
+                        []
+
+                    else
+                        List.concat [ model.eventsQueuedForSubmission, [ versionedEvent ] ]
             in
             { model
                 | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | currentMove = newMove })
-                , eventsQueuedForSubmission = List.concat [ model.eventsQueuedForSubmission, [ versionedEvent ] ]
+                , eventsQueuedForSubmission = eventsQueuedForSubmission
             }
     in
     case moveDirection of
@@ -1634,6 +1657,27 @@ completeMazeDrawing model =
     in
     case activeMaze.stage of
         DrawingStage ->
+            let
+                isApplyingServerEvent =
+                    not (List.isEmpty model.queuedEventsForApplication)
+
+                eventsQueuedForSubmission =
+                    if isApplyingServerEvent then
+                        []
+
+                    else
+                        List.concat
+                            [ model.eventsQueuedForSubmission
+                            , [ { event =
+                                    MazeDrawn
+                                        { walls = activeMaze.walls |> backendWallsFromWalls
+                                        , golds = activeMaze.golds
+                                        }
+                                , version = model.gameStateVersion + List.length model.eventsQueuedForSubmission + 1
+                                }
+                              ]
+                            ]
+            in
             { model
                 | mazes =
                     model.mazes
@@ -1645,18 +1689,7 @@ completeMazeDrawing model =
                                     , pathTravelled = [ activeMaze.position ]
                                 }
                             )
-                , eventsQueuedForSubmission =
-                    List.concat
-                        [ model.eventsQueuedForSubmission
-                        , [ { event =
-                                MazeDrawn
-                                    { walls = activeMaze.walls |> backendWallsFromWalls
-                                    , golds = activeMaze.golds
-                                    }
-                            , version = model.gameStateVersion + List.length model.eventsQueuedForSubmission + 1
-                            }
-                          ]
-                        ]
+                , eventsQueuedForSubmission = eventsQueuedForSubmission
             }
                 |> startSwitchingMazesIfOtherMazeNotWon
 
