@@ -83,7 +83,7 @@ type alias Model =
     , switchingMaze : SwitchingMazeState
     , gameStateVersion : Int
     , queuedEventsForApplication : List BackendEvent
-    , eventsQueuedForSubmission : List BackendEvent
+    , eventsQueuedForSubmission : List VersionedBackendEvent
     }
 
 
@@ -199,6 +199,12 @@ type BackendEvent
     | MoveRightBackendEvent
     | MoveUpBackendEvent
     | MoveDownBackendEvent
+
+
+type alias VersionedBackendEvent =
+    { event : BackendEvent
+    , version : Int
+    }
 
 
 init : () -> ( Model, Cmd Msg )
@@ -619,11 +625,11 @@ formUrlencoded object =
         |> String.join "&"
 
 
-submitEvent : Int -> BackendEvent -> Cmd Msg
-submitEvent version event =
+submitEvent : VersionedBackendEvent -> Cmd Msg
+submitEvent versionedEvent =
     let
         encodedEvent =
-            case event of
+            case versionedEvent.event of
                 MazeDrawn mazeBackend ->
                     mazeDrawnEventEncoder mazeBackend
 
@@ -641,7 +647,7 @@ submitEvent version event =
 
         body =
             [ ( "id", "d" )
-            , ( "version", String.fromInt version )
+            , ( "version", String.fromInt versionedEvent.version )
             , ( "event", Json.Encode.encode 0 encodedEvent )
             ]
     in
@@ -656,14 +662,14 @@ submitQueuedEvents : Model -> ( Model, Cmd Msg )
 submitQueuedEvents model =
     let
         -- TODO: Handle version iterating to allow submitting multiple events
-        events =
+        versionedEvents =
             model.eventsQueuedForSubmission
 
         requests =
-            List.map (submitEvent newVersion) events
+            List.map submitEvent versionedEvents
 
         newVersion =
-            model.gameStateVersion + List.length events
+            model.gameStateVersion + List.length versionedEvents
     in
     ( { model
         | gameStateVersion = newVersion
@@ -1197,22 +1203,21 @@ startPlayerMove moveDirection model =
             }
 
         moveToTarget target backendEvent =
+            let
+                newMove =
+                    Just
+                        { direction = moveDirection
+                        , origin = origin
+                        , target = target
+                        , reversing = False
+                        }
+
+                versionedEvent =
+                    { event = backendEvent, version = model.gameStateVersion + List.length model.eventsQueuedForSubmission + 1 }
+            in
             { model
-                | mazes =
-                    model.mazes
-                        |> Tuple.mapFirst
-                            (\maze ->
-                                { maze
-                                    | currentMove =
-                                        Just
-                                            { direction = moveDirection
-                                            , origin = origin
-                                            , target = target
-                                            , reversing = False
-                                            }
-                                }
-                            )
-                , eventsQueuedForSubmission = List.concat [ model.eventsQueuedForSubmission, [ backendEvent ] ]
+                | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | currentMove = newMove })
+                , eventsQueuedForSubmission = List.concat [ model.eventsQueuedForSubmission, [ versionedEvent ] ]
             }
     in
     case moveDirection of
@@ -1647,10 +1652,13 @@ completeMazeDrawing model =
                 , eventsQueuedForSubmission =
                     List.concat
                         [ model.eventsQueuedForSubmission
-                        , [ MazeDrawn
-                                { walls = activeMaze.walls |> backendWallsFromWalls
-                                , golds = activeMaze.golds
-                                }
+                        , [ { event =
+                                MazeDrawn
+                                    { walls = activeMaze.walls |> backendWallsFromWalls
+                                    , golds = activeMaze.golds
+                                    }
+                            , version = model.gameStateVersion + List.length model.eventsQueuedForSubmission + 1
+                            }
                           ]
                         ]
             }

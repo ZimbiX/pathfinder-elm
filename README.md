@@ -66,7 +66,6 @@ $ ./scripts/build
 
 - Sync game state with backend
     + Deal with sending/receiving events out of order
-        * Queue events with their version number
         * When receiving events, only apply events if they are the next expected version, and sort the events queued for application by version upon receiving more
     + Instantly replay game history upon page reload part-way through a game (no animation)
         * Figure out how to resume as the right player - some form of login?
