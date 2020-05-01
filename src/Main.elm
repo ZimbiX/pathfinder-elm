@@ -297,13 +297,12 @@ update msg model =
             )
 
         MouseUpdated unscaledMouse ->
-            ( model
+            model
                 |> updateMouseFromUnscaled unscaledMouse
                 |> updateDrawing
                 |> mouseProcessorForStageInteractions (model.mazes |> Tuple.first).stage
                 |> clearDrawingIfFinished
-            , Cmd.none
-            )
+                |> submitQueuedEvents
 
         DoneButtonPressed ->
             model
