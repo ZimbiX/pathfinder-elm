@@ -64,14 +64,12 @@ $ ./scripts/build
 
 ### Todo
 
-- Sync game state with backend
-    + Deal with sending/receiving events out of order
-        * Make backend only reply with contiguous events
-        * **When receiving events, only apply events if they are the next expected version**, ~~and sort the events queued for application by version upon receiving more~~
-    + Instantly replay game history upon page reload part-way through a game (no animation)
-        * Figure out how to resume as the right player - some form of login?
-    + Receive an event from the opponent and apply it as normal interaction (with animation), while local interaction for the opponent is disabled
-    + Generate UUID to identify the game on init
+- Resume as the right player upon a page reload - some form of login?
+    + Generate UUID to identify the user, and store in local storage - only when missing
+- Instantly replay game history upon page reload part-way through a game (no animation), but preserve how receiving an event from the opponent applies it as normal interaction (with animation)
+- Disable local interaction while it's the opponent's move
+- Generate UUID to identify the game on init
+- Display link for sharing with a friend to play against
 - Refactor to provide an event for the popup dismiss button
 - Fix board flipping stretching sideways when widescreen
 - Switch mazes from being a tuple to `mazes.active` and `mazes.inactive`
