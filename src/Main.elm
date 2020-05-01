@@ -455,7 +455,7 @@ queueNewEventsForApplication events model =
 
 requestNewEvents afterVersion =
     Http.get
-        { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?id=" ++ settings.gameId ++ "&after=" ++ String.fromInt afterVersion
+        { url = "https://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?id=" ++ settings.gameId ++ "&after=" ++ String.fromInt afterVersion
         , expect = Http.expectString GotEventsFromBackend
         }
 
@@ -661,7 +661,7 @@ submitEvent versionedEvent =
             ]
     in
     Http.post
-        { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php"
+        { url = "https://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php"
         , body = body |> formUrlencoded |> Http.stringBody "application/x-www-form-urlencoded"
         , expect = Http.expectString SentEventToBackend
         }
