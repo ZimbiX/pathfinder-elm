@@ -82,7 +82,7 @@ type alias Model =
     , popup : Maybe Popup
     , switchingMaze : SwitchingMazeState
     , gameStateVersion : Int
-    , queuedEventsForApplication : List BackendEvent
+    , queuedEventsForApplication : List VersionedBackendEvent
     , eventsQueuedForSubmission : List VersionedBackendEvent
     }
 
@@ -355,7 +355,7 @@ applyNextEventFromServerIfReady model =
                     else
                         model
             in
-            case firstEvent of
+            case firstEvent.event of
                 MazeDrawn mazeBackend ->
                     { model
                         | queuedEventsForApplication = laterEvents
@@ -418,15 +418,17 @@ backendWallsFromWalls walls =
         walls
 
 
-queueNewEventsForApplication : List EventResponse -> Model -> ( Model, Cmd Msg )
-queueNewEventsForApplication eventsResponse model =
+queueNewEventsForApplication : List VersionedBackendEvent -> Model -> ( Model, Cmd Msg )
+queueNewEventsForApplication events model =
     let
-        events =
-            List.map (\e -> e.event) eventsResponse
+        queuedEventsForApplication =
+            List.concat [ model.queuedEventsForApplication, events ]
+                |> List.sortBy (\event -> event.version)
+                |> Debug.log "updated queuedEventsForApplication"
     in
-    case List.Extra.last eventsResponse of
+    case List.Extra.last events of
         Just latestEvent ->
-            ( { model | gameStateVersion = latestEvent.version, queuedEventsForApplication = List.concat [ model.queuedEventsForApplication, events ] }
+            ( { model | gameStateVersion = latestEvent.version, queuedEventsForApplication = queuedEventsForApplication }
               --, Cmd.none
             , Process.sleep 100 |> Task.perform (\_ -> RequestNewEventsFromBackend)
             )
@@ -443,12 +445,6 @@ requestNewEvents afterVersion =
         { url = "http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?id=d&after=" ++ String.fromInt afterVersion
         , expect = Http.expectString GotEventsFromBackend
         }
-
-
-type alias EventResponse =
-    { version : Int
-    , event : BackendEvent
-    }
 
 
 backendEventDecoder : Json.Decode.Decoder BackendEvent
@@ -537,14 +533,14 @@ orientationDecoder =
             )
 
 
-eventDecoder : Json.Decode.Decoder EventResponse
+eventDecoder : Json.Decode.Decoder VersionedBackendEvent
 eventDecoder =
-    Json.Decode.map2 EventResponse
-        (Json.Decode.field "version" Json.Decode.int)
+    Json.Decode.map2 VersionedBackendEvent
         (Json.Decode.field "event" backendEventDecoder)
+        (Json.Decode.field "version" Json.Decode.int)
 
 
-eventsDecoder : Json.Decode.Decoder (List EventResponse)
+eventsDecoder : Json.Decode.Decoder (List VersionedBackendEvent)
 eventsDecoder =
     Json.Decode.list eventDecoder
 
