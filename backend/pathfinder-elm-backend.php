@@ -45,8 +45,23 @@ function get_events_after_version() {
     return $row;
   }
 
+  function only_contiguous_versions($after_version, $events) {
+    $contiguous = [];
+    $expected_next_version = $after_version;
+    foreach ($events as $row) {
+      $expected_next_version++;
+      if ($row['version'] != $expected_next_version) { break; }
+      array_push($contiguous, $row);
+    }
+    return $contiguous;
+  }
+
   if ($result) {
-    echo json_encode(array_map("row_with_decoded_event", $result));
+    if (isset($_GET['all'])) {
+      echo json_encode(array_map("row_with_decoded_event", $result));
+    } else {
+      echo json_encode(only_contiguous_versions($after_version, array_map("row_with_decoded_event", $result)));
+    }
   } else {
     echo json_encode([]);
   }
