@@ -64,15 +64,19 @@ $ ./scripts/build
 
 ### Todo
 
+- Switch mazes from being a tuple to `mazes.active` and `mazes.inactive`
+- Once player 2 finishes drawing in same-device mode, it should be player 1's turn to move first (on the maze player 2 just drew)
+- Fix popup dismiss button's right half being unclickable
+- Allow two players to draw their maze simultaneously on each device
 - Resume as the right player upon a page reload - some form of login?
     + Generate UUID to identify the user, and store in local storage - only when missing
 - Instantly replay game history upon page reload part-way through a game (no animation), but preserve how receiving an event from the opponent applies it as normal interaction (with animation)
 - Disable local interaction while it's the opponent's move
-- Generate UUID to identify the game on init
+- Generate UUID to identify the game on init - if not provided in URL
+- Read game id from URL
 - Display link for sharing with a friend to play against
 - Refactor to provide an event for the popup dismiss button
 - Fix board flipping stretching sideways when widescreen
-- Switch mazes from being a tuple to `mazes.active` and `mazes.inactive`
 - Call `switchMazes` from somewhere better
 - Count moves and wall hits and show this in the winning message
 - Prevent touchscreen button lag

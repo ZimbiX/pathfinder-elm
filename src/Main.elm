@@ -40,7 +40,7 @@ settings =
         { delaySeconds = 0.2
         , animationDurationSeconds = 0.8
         }
-    , gameId = "g"
+    , gameId = "h"
     }
 
 
