@@ -76,7 +76,7 @@ main =
 
 
 type alias Model =
-    { mazes : ( Maze, Maze )
+    { mazes : Mazes
     , mouse : Mouse
     , drawing : Drawing
     , snappedDrawingPoints : SnappedDrawingPoints
@@ -85,6 +85,12 @@ type alias Model =
     , gameStateVersion : Int
     , queuedEventsForApplication : List VersionedBackendEvent
     , eventsQueuedForSubmission : List VersionedBackendEvent
+    }
+
+
+type alias Mazes =
+    { active : Maze
+    , inactive : Maze
     }
 
 
@@ -211,7 +217,9 @@ type alias VersionedBackendEvent =
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { mazes =
-            ( initialMaze, initialMaze )
+            { active = initialMaze
+            , inactive = initialMaze
+            }
       , mouse =
             { position = { x = 0, y = 0 }
             , buttonDown = NoMouseButton
@@ -300,7 +308,7 @@ update msg model =
             model
                 |> updateMouseFromUnscaled unscaledMouse
                 |> updateDrawing
-                |> mouseProcessorForStageInteractions (model.mazes |> Tuple.first).stage
+                |> mouseProcessorForStageInteractions model.mazes.active.stage
                 |> clearDrawingIfFinished
                 |> submitQueuedEvents
 
@@ -341,6 +349,21 @@ update msg model =
                     requestErr |> Debug.log "Error submitting event" |> (\_ -> ( model, Cmd.none ))
 
 
+updateActiveMaze : (Maze -> Maze) -> Model -> Model
+updateActiveMaze mazeUpdater model =
+    { model
+        | mazes =
+            model.mazes
+                |> (\mazes ->
+                        { mazes
+                            | active =
+                                mazes.active
+                                    |> mazeUpdater
+                        }
+                   )
+    }
+
+
 applyNextEventFromServerIfReady : Model -> Model
 applyNextEventFromServerIfReady model =
     case List.Extra.uncons model.queuedEventsForApplication |> Debug.log "applyNextEventFromServerIfReady" of
@@ -361,17 +384,14 @@ applyNextEventFromServerIfReady model =
             --if firstEvent.version == expectedNextVersion then
             case firstEvent.event of
                 MazeDrawn mazeBackend ->
-                    { model
-                        | mazes =
-                            model.mazes
-                                |> Tuple.mapFirst
-                                    (\maze ->
-                                        { maze
-                                            | golds = mazeBackend.golds
-                                            , walls = mazeBackend.walls |> wallsFromBackendWalls
-                                        }
-                                    )
-                    }
+                    model
+                        |> updateActiveMaze
+                            (\maze ->
+                                { maze
+                                    | golds = mazeBackend.golds
+                                    , walls = mazeBackend.walls |> wallsFromBackendWalls
+                                }
+                            )
                         |> completeMazeDrawing
                         |> swapMazes
                         |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
@@ -718,7 +738,14 @@ zoomCoordinate coord =
 
 updatePlayerPosition : Float -> Model -> Model
 updatePlayerPosition deltaTime model =
-    case (model.mazes |> Tuple.first).currentMove of
+    let
+        activeMaze =
+            model.mazes.active
+
+        position =
+            activeMaze.position
+    in
+    case activeMaze.currentMove of
         Just currentMove ->
             let
                 moveDistance =
@@ -727,31 +754,29 @@ updatePlayerPosition deltaTime model =
                 column =
                     case currentMove.direction of
                         MoveRight ->
-                            (model.mazes |> Tuple.first).position.column + moveDistance
+                            position.column + moveDistance
 
                         MoveLeft ->
-                            (model.mazes |> Tuple.first).position.column - moveDistance
+                            position.column - moveDistance
 
                         _ ->
-                            (model.mazes |> Tuple.first).position.column
+                            position.column
 
                 row =
                     case currentMove.direction of
                         MoveDown ->
-                            (model.mazes |> Tuple.first).position.row + moveDistance
+                            position.row + moveDistance
 
                         MoveUp ->
-                            (model.mazes |> Tuple.first).position.row - moveDistance
+                            position.row - moveDistance
 
                         _ ->
-                            (model.mazes |> Tuple.first).position.row
+                            position.row
 
-                position =
+                newPosition =
                     Position column row
             in
-            { model
-                | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | position = position })
-            }
+            model |> updateActiveMaze (\maze -> { maze | position = newPosition })
 
         Nothing ->
             model
@@ -830,12 +855,12 @@ degreesFromRadians angleRadians =
 
 playerCanStartMove : Model -> Bool
 playerCanStartMove model =
-    case (model.mazes |> Tuple.first).currentMove of
+    case model.mazes.active.currentMove of
         Just _ ->
             False
 
         Nothing ->
-            case (model.mazes |> Tuple.first).stage of
+            case model.mazes.active.stage of
                 PlayingStage ->
                     case model.switchingMaze of
                         SwitchingMaze _ ->
@@ -862,42 +887,36 @@ tryStartPlayerMove moveDirection model =
 
 finishPlayerMove : Model -> Model
 finishPlayerMove model =
-    case (model.mazes |> Tuple.first).currentMove of
+    case model.mazes.active.currentMove of
         Just currentMove ->
             if playerWithinMoveBounds model currentMove then
                 model
 
             else if currentMove.reversing then
-                { model
-                    | mazes =
-                        model.mazes
-                            |> Tuple.mapFirst
-                                (\maze ->
-                                    { maze
-                                        | position = currentMove.origin
-                                        , currentMove = Nothing
-                                    }
-                                )
-                }
+                model
+                    |> updateActiveMaze
+                        (\maze ->
+                            { maze
+                                | position = currentMove.origin
+                                , currentMove = Nothing
+                            }
+                        )
                     |> startSwitchingMazesIfOtherMazeNotWon
 
             else
                 let
                     pathTravelled =
-                        List.concat [ [ currentMove.target ], (model.mazes |> Tuple.first).pathTravelled ]
+                        List.concat [ [ currentMove.target ], model.mazes.active.pathTravelled ]
                 in
-                { model
-                    | mazes =
-                        model.mazes
-                            |> Tuple.mapFirst
-                                (\maze ->
-                                    { maze
-                                        | position = currentMove.target
-                                        , currentMove = Nothing
-                                        , pathTravelled = pathTravelled
-                                    }
-                                )
-                }
+                model
+                    |> updateActiveMaze
+                        (\maze ->
+                            { maze
+                                | position = currentMove.target
+                                , currentMove = Nothing
+                                , pathTravelled = pathTravelled
+                            }
+                        )
 
         Nothing ->
             model
@@ -909,7 +928,7 @@ returnToOriginIfPathUnclear model =
         model
 
     else
-        case (model.mazes |> Tuple.first).currentMove of
+        case model.mazes.active.currentMove of
             Just currentMove ->
                 if currentMove.reversing then
                     model
@@ -919,7 +938,8 @@ returnToOriginIfPathUnclear model =
                         returnMove =
                             Just { currentMove | reversing = True, direction = oppositeDirection currentMove.direction }
                     in
-                    { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | currentMove = returnMove }) }
+                    model
+                        |> updateActiveMaze (\maze -> { maze | currentMove = returnMove })
                         |> revealHitWall
 
             Nothing ->
@@ -944,17 +964,30 @@ oppositeDirection direction =
 
 pathAheadClear : Model -> Bool
 pathAheadClear model =
-    case (model.mazes |> Tuple.first).currentMove of
+    case model.mazes.active.currentMove of
         Just currentMove ->
-            if not (withinBoard (model.mazes |> Tuple.first).position) then
+            let
+                activeMaze =
+                    model.mazes.active
+
+                origin =
+                    currentMove.origin
+
+                target =
+                    currentMove.target
+
+                position =
+                    activeMaze.position
+            in
+            if not (withinBoard activeMaze.position) then
                 False
 
-            else if wallExistsBetweenPoints (model.mazes |> Tuple.first).walls currentMove.origin currentMove.target then
-                (numberBetween currentMove.origin.column (currentMove.origin.column + 0.4) (model.mazes |> Tuple.first).position.column
-                    || numberBetween currentMove.origin.column (currentMove.origin.column - 0.4) (model.mazes |> Tuple.first).position.column
+            else if wallExistsBetweenPoints activeMaze.walls origin target then
+                (numberBetween origin.column (origin.column + 0.4) position.column
+                    || numberBetween origin.column (origin.column - 0.4) position.column
                 )
-                    && (numberBetween currentMove.origin.row (currentMove.origin.row + 0.4) (model.mazes |> Tuple.first).position.row
-                            || numberBetween currentMove.origin.row (currentMove.origin.row - 0.4) (model.mazes |> Tuple.first).position.row
+                    && (numberBetween origin.row (origin.row + 0.4) position.row
+                            || numberBetween origin.row (origin.row - 0.4) position.row
                        )
 
             else
@@ -995,16 +1028,16 @@ wallIsAtPoint point wall =
 
 revealHitWall : Model -> Model
 revealHitWall model =
-    case (model.mazes |> Tuple.first).currentMove of
+    case model.mazes.active.currentMove of
         Just currentMove ->
             let
                 currentMoveMidpoint =
                     calculateMidpoint currentMove.origin currentMove.target
 
                 walls =
-                    (model.mazes |> Tuple.first).walls |> List.map (revealWallIfAtPoint currentMoveMidpoint)
+                    model.mazes.active.walls |> List.map (revealWallIfAtPoint currentMoveMidpoint)
             in
-            { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = walls }) }
+            model |> updateActiveMaze (\maze -> { maze | walls = walls })
 
         Nothing ->
             model
@@ -1044,11 +1077,8 @@ dismissPopup model =
     let
         modelDismissed =
             { model | popup = Nothing }
-
-        inactiveMaze =
-            Tuple.second model.mazes
     in
-    case inactiveMaze.stage of
+    case model.mazes.inactive.stage of
         DrawingStage ->
             modelDismissed
 
@@ -1071,11 +1101,7 @@ switchMazeIfMPressed rawKey model =
 
 startSwitchingMazesIfOtherMazeNotWon : Model -> Model
 startSwitchingMazesIfOtherMazeNotWon model =
-    let
-        inactiveMaze =
-            model.mazes |> Tuple.second
-    in
-    case inactiveMaze.stage of
+    case model.mazes.inactive.stage of
         DrawingStage ->
             model |> startSwitchingMazes
 
@@ -1125,9 +1151,9 @@ swapMazes model =
     { model
         | switchingMaze = NotSwitchingMaze
         , mazes =
-            ( model.mazes |> Tuple.second
-            , model.mazes |> Tuple.first
-            )
+            { active = model.mazes.inactive
+            , inactive = model.mazes.active
+            }
     }
 
 
@@ -1155,10 +1181,19 @@ playerWithinMoveBounds : Model -> { direction : MoveDirection, origin : Position
 playerWithinMoveBounds model currentMove =
     let
         columnWithinMoveBounds =
-            numberBetween currentMove.origin.column currentMove.target.column (model.mazes |> Tuple.first).position.column
+            numberBetween origin.column target.column position.column
 
         rowWithinMoveBounds =
-            numberBetween currentMove.origin.row currentMove.target.row (model.mazes |> Tuple.first).position.row
+            numberBetween origin.row target.row position.row
+
+        origin =
+            currentMove.origin
+
+        target =
+            currentMove.target
+
+        position =
+            model.mazes.active.position
     in
     columnWithinMoveBounds && rowWithinMoveBounds
 
@@ -1203,7 +1238,7 @@ startPlayerMove : MoveDirection -> Model -> Model
 startPlayerMove moveDirection model =
     let
         activeMaze =
-            model.mazes |> Tuple.first
+            model.mazes.active
 
         origin =
             { column = activeMaze.position.column
@@ -1233,10 +1268,8 @@ startPlayerMove moveDirection model =
                     else
                         List.concat [ model.eventsQueuedForSubmission, [ versionedEvent ] ]
             in
-            { model
-                | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | currentMove = newMove })
-                , eventsQueuedForSubmission = eventsQueuedForSubmission
-            }
+            { model | eventsQueuedForSubmission = eventsQueuedForSubmission }
+                |> updateActiveMaze (\maze -> { maze | currentMove = newMove })
     in
     case moveDirection of
         MoveRight ->
@@ -1256,12 +1289,12 @@ updateWallsOpacity : Float -> Model -> Model
 updateWallsOpacity deltaTime model =
     let
         activeMaze =
-            model.mazes |> Tuple.first
+            model.mazes.active
 
         walls =
             List.map (updateWallOpacity deltaTime) activeMaze.walls
     in
-    { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = walls }) }
+    model |> updateActiveMaze (\maze -> { maze | walls = walls })
 
 
 updateWallOpacity : Float -> Wall -> Wall
@@ -1383,6 +1416,13 @@ addGridIntersectionToDrawingWithInterpolation snappedDrawingPoints gridIntersect
                 List.concat [ [ gridIntersection ], snappedDrawingPoints ]
 
 
+
+-- Produce a list of numbers in the range given, interpolating by 1
+-- e.g.:
+-- rangeFloatByIncrementDirected 1.5 4.5 -> [1.5, 2.5, 3.5, 4.5]
+-- rangeFloatByIncrementDirected 4.5 1.5 -> [4.5, 3.5, 2.5, 1.5]
+
+
 rangeFloatByIncrementDirected : Float -> Float -> List Float
 rangeFloatByIncrementDirected start end =
     if start < end then
@@ -1416,9 +1456,9 @@ createWallsFromFinishedDrawing model =
                             listOfMaybeWalls |> Maybe.Extra.values |> Debug.log "New walls"
 
                         walls =
-                            List.concat [ newWalls, (model.mazes |> Tuple.first).walls ]
+                            List.concat [ newWalls, model.mazes.active.walls ]
                     in
-                    { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = walls }) }
+                    model |> updateActiveMaze (\maze -> { maze | walls = walls })
 
                 Nothing ->
                     model
@@ -1519,9 +1559,9 @@ createGold model =
         if withinBoard nearestGridCenter then
             let
                 golds =
-                    List.concat [ [ nearestGridCenter ], (model.mazes |> Tuple.first).golds ]
+                    List.concat [ [ nearestGridCenter ], model.mazes.active.golds ]
             in
-            { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | golds = golds }) }
+            model |> updateActiveMaze (\maze -> { maze | golds = golds })
 
         else
             model
@@ -1536,9 +1576,9 @@ deleteGold model =
         RightMouseButton ->
             let
                 golds =
-                    List.filter (itemIsNotUnderPointer model.mouse) (model.mazes |> Tuple.first).golds
+                    List.filter (itemIsNotUnderPointer model.mouse) model.mazes.active.golds
             in
-            { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | golds = golds }) }
+            model |> updateActiveMaze (\maze -> { maze | golds = golds })
 
         _ ->
             model
@@ -1550,9 +1590,9 @@ deleteWall model =
         RightMouseButton ->
             let
                 walls =
-                    List.filter (wallIsNotUnderPointer model.mouse) (model.mazes |> Tuple.first).walls
+                    List.filter (wallIsNotUnderPointer model.mouse) model.mazes.active.walls
             in
-            { model | mazes = model.mazes |> Tuple.mapFirst (\maze -> { maze | walls = walls }) }
+            model |> updateActiveMaze (\maze -> { maze | walls = walls })
 
         _ ->
             model
@@ -1652,7 +1692,7 @@ completeMazeDrawing : Model -> Model
 completeMazeDrawing model =
     let
         activeMaze =
-            model.mazes |> Tuple.first
+            model.mazes.active
     in
     case activeMaze.stage of
         DrawingStage ->
@@ -1677,19 +1717,15 @@ completeMazeDrawing model =
                               ]
                             ]
             in
-            { model
-                | mazes =
-                    model.mazes
-                        |> Tuple.mapFirst
-                            (\maze ->
-                                { maze
-                                    | walls = activeMaze.walls |> hideAllWalls
-                                    , stage = PlayingStage
-                                    , pathTravelled = [ activeMaze.position ]
-                                }
-                            )
-                , eventsQueuedForSubmission = eventsQueuedForSubmission
-            }
+            { model | eventsQueuedForSubmission = eventsQueuedForSubmission }
+                |> updateActiveMaze
+                    (\maze ->
+                        { maze
+                            | walls = activeMaze.walls |> hideAllWalls
+                            , stage = PlayingStage
+                            , pathTravelled = [ activeMaze.position ]
+                        }
+                    )
                 |> startSwitchingMazesIfOtherMazeNotWon
 
         PlayingStage ->
@@ -1723,12 +1759,12 @@ endGameIfWon model =
             Just { messageLines = [ message ] }
 
         activeMaze =
-            model.mazes |> Tuple.first
+            model.mazes.active
 
         inactiveMaze =
-            model.mazes |> Tuple.second
+            model.mazes.inactive
     in
-    case (model.mazes |> Tuple.first).stage of
+    case model.mazes.active.stage of
         DrawingStage ->
             model
 
@@ -1737,18 +1773,14 @@ endGameIfWon model =
                 (activeMaze.currentMove == Nothing)
                     && (activeMaze.golds |> List.any (\gold -> gold == activeMaze.position))
             then
-                { model
-                    | mazes =
-                        model.mazes
-                            |> Tuple.mapFirst
-                                (\maze ->
-                                    { maze
-                                        | walls = activeMaze.walls |> revealAllWalls
-                                        , stage = FirstWinStage
-                                    }
-                                )
-                    , popup = winPopup
-                }
+                { model | popup = winPopup }
+                    |> updateActiveMaze
+                        (\maze ->
+                            { maze
+                                | walls = activeMaze.walls |> revealAllWalls
+                                , stage = FirstWinStage
+                            }
+                        )
 
             else
                 model
@@ -1765,8 +1797,8 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     let
         animationActive =
-            ((model.mazes |> Tuple.first).currentMove /= Nothing)
-                || wallsAreAnimating (model.mazes |> Tuple.first).walls
+            (model.mazes.active.currentMove /= Nothing)
+                || wallsAreAnimating model.mazes.active.walls
                 || (model.switchingMaze /= NotSwitchingMaze)
                 || not (List.isEmpty model.queuedEventsForApplication)
 
@@ -1862,7 +1894,7 @@ view model =
             ]
             [ viewBackground
             , lazy viewBoard model
-            , lazy viewButtons (model.mazes |> Tuple.first).stage
+            , lazy viewButtons model.mazes.active.stage
             , viewGithubLink
             ]
             |> toUnstyled
@@ -1958,16 +1990,10 @@ viewBoard model =
                     0
 
         activeMaze =
-            mazes |> Tuple.first
+            model.mazes.active
 
-        frontMaze =
-            mazes |> Tuple.first
-
-        backMaze =
-            mazes |> Tuple.second
-
-        mazes =
-            model.mazes
+        inactiveMaze =
+            model.mazes.inactive
 
         flipAnimateCss =
             case model.switchingMaze of
@@ -1998,8 +2024,8 @@ viewBoard model =
             ]
         )
         (List.concat
-            [ [ div [ css [ Css.property "backface-visibility" "hidden" ] ] (viewGrid frontMaze)
-              , div [ css [ Css.transforms [ Css.rotateY (Css.deg 180) ] ] ] (viewGrid backMaze)
+            [ [ div [ css [ Css.property "backface-visibility" "hidden" ] ] (viewGrid activeMaze)
+              , div [ css [ Css.transforms [ Css.rotateY (Css.deg 180) ] ] ] (viewGrid inactiveMaze)
               ]
             , viewDrawingStage
             , [ viewPopup model.popup ]
