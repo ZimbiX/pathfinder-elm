@@ -64,7 +64,6 @@ $ ./scripts/build
 
 ### Todo
 
-- Once player 2 finishes drawing in same-device mode, it should be player 1's turn to move first (on the maze player 2 just drew)
 - Fix popup dismiss button's right half being unclickable
 - Allow two players to draw their maze simultaneously on each device
 - Resume as the right player upon a page reload - some form of login?

@@ -232,7 +232,8 @@ init _ =
       , queuedEventsForApplication = []
       , eventsQueuedForSubmission = []
       }
-    , requestNewEvents 0
+      --, requestNewEvents 0
+    , Cmd.none
     )
 
 
@@ -332,7 +333,7 @@ update msg model =
                     case eventsResponse |> Json.Decode.decodeString eventsDecoder of
                         Ok events ->
                             model
-                                |> queueNewEventsForApplication (events |> Debug.log "Decoded new events")
+                                |> queueNewEventsForApplication events
 
                         Err decodeErr ->
                             ( eventsResponse, decodeErr ) |> Debug.log "Error decoding received new events" |> (\_ -> ( model, Cmd.none ))
@@ -366,7 +367,7 @@ updateActiveMaze mazeUpdater model =
 
 applyNextEventFromServerIfReady : Model -> Model
 applyNextEventFromServerIfReady model =
-    case List.Extra.uncons model.queuedEventsForApplication |> Debug.log "applyNextEventFromServerIfReady" of
+    case List.Extra.uncons model.queuedEventsForApplication of
         Just ( firstEvent, laterEvents ) ->
             let
                 moveIfReady direction =
@@ -451,7 +452,6 @@ queueNewEventsForApplication events model =
         queuedEventsForApplication =
             List.concat [ model.queuedEventsForApplication, events ]
                 |> List.sortBy (\event -> event.version)
-                |> Debug.log "updated queuedEventsForApplication"
     in
     case List.Extra.last events of
         Just latestEvent ->
@@ -1083,7 +1083,7 @@ dismissPopup model =
             modelDismissed
 
         PlayingStage ->
-            modelDismissed |> startSwitchingMazes
+            modelDismissed
 
         FirstWinStage ->
             modelDismissed
@@ -1453,7 +1453,7 @@ createWallsFromFinishedDrawing model =
                             listMapConsecutively createWall model.snappedDrawingPoints
 
                         newWalls =
-                            listOfMaybeWalls |> Maybe.Extra.values |> Debug.log "New walls"
+                            listOfMaybeWalls |> Maybe.Extra.values
 
                         walls =
                             List.concat [ newWalls, model.mazes.active.walls ]
@@ -1726,7 +1726,17 @@ completeMazeDrawing model =
                             , pathTravelled = [ activeMaze.position ]
                         }
                     )
-                |> startSwitchingMazesIfOtherMazeNotWon
+                |> (\newModel ->
+                        case newModel.mazes.inactive.stage of
+                            DrawingStage ->
+                                newModel |> startSwitchingMazesIfOtherMazeNotWon
+
+                            PlayingStage ->
+                                newModel
+
+                            FirstWinStage ->
+                                newModel
+                   )
 
         PlayingStage ->
             model
@@ -1981,10 +1991,10 @@ viewBoard model =
             case model.switchingMaze of
                 SwitchingMaze progressFraction ->
                     if progressFraction >= 0 then
-                        180 |> Debug.log "flipDegrees"
+                        180
 
                     else
-                        0 |> Debug.log "flipDegrees"
+                        0
 
                 NotSwitchingMaze ->
                     0
