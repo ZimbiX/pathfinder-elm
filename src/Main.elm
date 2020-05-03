@@ -1967,16 +1967,11 @@ roundFloat =
     round >> toFloat
 
 
+viewBoard : Model -> Html.Styled.Html Msg
 viewBoard model =
     let
-        mouseEvents =
-            [ updateMouseOn "pointerdown"
-            , updateMouseOn "pointerup"
-            , updateMouseOn "pointermove"
-            ]
-
         viewDrawingStage =
-            case activeMaze.stage of
+            case model.mazes.active.stage of
                 DrawingStage ->
                     [ lazy viewDrawing model.drawing
                     , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
@@ -1987,7 +1982,24 @@ viewBoard model =
 
                 FirstWinStage ->
                     []
+    in
+    div
+        [ class "viewBoard"
+        , css
+            [ Css.property "zoom" ((settings.boardZoom * 100 |> String.fromFloat) ++ "%")
+            ]
+        ]
+        (List.concat
+            [ [ viewMazesWithRotation model ]
+            , viewDrawingStage
+            , [ viewPopup model.popup ]
+            ]
+        )
 
+
+viewMazesWithRotation : Model -> Html.Styled.Html Msg
+viewMazesWithRotation model =
+    let
         flipDegrees =
             case model.switchingMaze of
                 SwitchingMaze progressFraction ->
@@ -2000,12 +2012,6 @@ viewBoard model =
                 NotSwitchingMaze ->
                     0
 
-        activeMaze =
-            model.mazes.active
-
-        inactiveMaze =
-            model.mazes.inactive
-
         flipAnimateCss =
             case model.switchingMaze of
                 SwitchingMaze progressFraction ->
@@ -2013,16 +2019,21 @@ viewBoard model =
 
                 NotSwitchingMaze ->
                     []
+
+        mouseEvents =
+            [ updateMouseOn "pointerdown"
+            , updateMouseOn "pointerup"
+            , updateMouseOn "pointermove"
+            ]
     in
     div
         (List.concat
-            [ [ class "viewBoard"
+            [ [ class "viewMazesWithRotation"
               , css
                     (List.concat
                         [ [ width (px settings.boardWidth)
                           , height (px settings.boardHeight)
                           , Css.touchAction Css.none
-                          , Css.property "zoom" ((settings.boardZoom * 100 |> String.fromFloat) ++ "%")
                           , Css.transformStyle Css.preserve3d
                           , Css.transforms [ Css.rotateY (Css.deg flipDegrees) ]
 
@@ -2035,24 +2046,20 @@ viewBoard model =
             , mouseEvents
             ]
         )
-        (List.concat
-            [ [ div
-                    [ class "activeMaze"
-                    , css [ Css.property "backface-visibility" "hidden" ]
-                    ]
-                    (viewGrid activeMaze)
-              , div
-                    [ class "inactiveMaze"
-                    , css [ Css.transforms [ Css.rotateY (Css.deg 180) ] ]
-                    ]
-                    (viewGrid inactiveMaze)
-              ]
-            , viewDrawingStage
-            , [ viewPopup model.popup ]
+        [ div
+            [ class "activeMaze"
+            , css [ Css.property "backface-visibility" "hidden" ] -- TODO: Add this to the other maze too
             ]
-        )
+            (viewGrid model.mazes.active)
+        , div
+            [ class "inactiveMaze"
+            , css [ Css.transforms [ Css.rotateY (Css.deg 180) ] ]
+            ]
+            (viewGrid model.mazes.inactive)
+        ]
 
 
+viewGrid : Maze -> List (Html.Styled.Html Msg)
 viewGrid maze =
     [ viewBoardCells
     , viewPathTravelled maze.pathTravelled
@@ -2062,6 +2069,7 @@ viewGrid maze =
     ]
 
 
+viewBackground : Html.Styled.Html Msg
 viewBackground =
     div
         [ class "viewBackground"
@@ -2094,6 +2102,7 @@ viewBackground =
         []
 
 
+viewBoardCells : Html.Styled.Html Msg
 viewBoardCells =
     div
         [ css

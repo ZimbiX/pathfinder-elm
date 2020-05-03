@@ -64,7 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
-- Fix popup dismiss button's right half being unclickable
+- Fix board flipping stretching sideways when widescreen
 - Display text for whose turn it is to do what
 - Allow two players to draw their maze simultaneously on each device
 - Resume as the right player upon a page reload - some form of login?
@@ -75,7 +75,6 @@ $ ./scripts/build
 - Read game id from URL
 - Display link for sharing with a friend to play against
 - Refactor to provide an event for the popup dismiss button
-- Fix board flipping stretching sideways when widescreen
 - Call `switchMazes` from somewhere better
 - Count moves and wall hits and show this in the winning message
 - Prevent touchscreen button lag
