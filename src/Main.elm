@@ -177,6 +177,7 @@ type alias Coordinate =
 
 type Stage
     = DrawingStage
+    | WaitingForOtherMazeToBeDrawnStage
     | PlayingStage
     | FirstWinStage
 
@@ -355,6 +356,21 @@ updateActiveMaze mazeUpdater model =
                         { mazes
                             | active =
                                 mazes.active
+                                    |> mazeUpdater
+                        }
+                   )
+    }
+
+
+updateInactiveMaze : (Maze -> Maze) -> Model -> Model
+updateInactiveMaze mazeUpdater model =
+    { model
+        | mazes =
+            model.mazes
+                |> (\mazes ->
+                        { mazes
+                            | inactive =
+                                mazes.inactive
                                     |> mazeUpdater
                         }
                    )
@@ -713,6 +729,9 @@ mouseProcessorForStageInteractions stage =
                 >> deleteWall
                 >> createWallsFromFinishedDrawing
 
+        WaitingForOtherMazeToBeDrawnStage ->
+            \x -> x
+
         PlayingStage ->
             tryStartPlayerMoveFromSwipe
 
@@ -871,6 +890,9 @@ playerCanStartMove model =
 
                         NotSwitchingMaze ->
                             True
+
+                WaitingForOtherMazeToBeDrawnStage ->
+                    False
 
                 DrawingStage ->
                     False
@@ -1077,19 +1099,7 @@ dismissPopupIfEnterPressed rawKey model =
 
 dismissPopup : Model -> Model
 dismissPopup model =
-    let
-        modelDismissed =
-            { model | popup = Nothing }
-    in
-    case model.mazes.inactive.stage of
-        DrawingStage ->
-            modelDismissed
-
-        PlayingStage ->
-            modelDismissed
-
-        FirstWinStage ->
-            modelDismissed
+    { model | popup = Nothing }
 
 
 switchMazeIfMPressed : RawKey -> Model -> Model
@@ -1106,6 +1116,9 @@ startSwitchingMazesIfOtherMazeNotWon : Model -> Model
 startSwitchingMazesIfOtherMazeNotWon model =
     case model.mazes.inactive.stage of
         DrawingStage ->
+            model |> startSwitchingMazes
+
+        WaitingForOtherMazeToBeDrawnStage ->
             model |> startSwitchingMazes
 
         PlayingStage ->
@@ -1696,9 +1709,8 @@ completeMazeDrawing model =
     let
         activeMaze =
             model.mazes.active
-    in
-    case activeMaze.stage of
-        DrawingStage ->
+
+        complete =
             let
                 isApplyingServerEvent =
                     not (List.isEmpty model.queuedEventsForApplication)
@@ -1725,7 +1737,7 @@ completeMazeDrawing model =
                     (\maze ->
                         { maze
                             | walls = activeMaze.walls |> hideAllWalls
-                            , stage = PlayingStage
+                            , stage = WaitingForOtherMazeToBeDrawnStage
                             , pathTravelled = [ activeMaze.position ]
                         }
                     )
@@ -1734,12 +1746,25 @@ completeMazeDrawing model =
                             DrawingStage ->
                                 newModel |> startSwitchingMazesIfOtherMazeNotWon
 
+                            WaitingForOtherMazeToBeDrawnStage ->
+                                newModel
+                                    |> updateActiveMaze (\maze -> { maze | stage = PlayingStage })
+                                    |> updateInactiveMaze (\maze -> { maze | stage = PlayingStage })
+
                             PlayingStage ->
                                 newModel
 
                             FirstWinStage ->
                                 newModel
                    )
+    in
+    case activeMaze.stage of
+        DrawingStage ->
+            complete
+
+        WaitingForOtherMazeToBeDrawnStage ->
+            -- Impossible to get to?
+            model
 
         PlayingStage ->
             model
@@ -1762,6 +1787,9 @@ endGameIfWon model =
                 DrawingStage ->
                     "Error"
 
+                WaitingForOtherMazeToBeDrawnStage ->
+                    "Error"
+
                 PlayingStage ->
                     winMessage
 
@@ -1779,6 +1807,9 @@ endGameIfWon model =
     in
     case model.mazes.active.stage of
         DrawingStage ->
+            model
+
+        WaitingForOtherMazeToBeDrawnStage ->
             model
 
         PlayingStage ->
@@ -1907,7 +1938,7 @@ view model =
             ]
             [ viewBackground
             , lazy viewBoard model
-            , lazy viewButtons model.mazes.active.stage
+            , lazy2 viewButtons model.mazes.active.stage (model.switchingMaze /= NotSwitchingMaze)
             , viewGithubLink
             ]
             |> toUnstyled
@@ -1978,6 +2009,9 @@ viewBoard model =
                     [ lazy viewDrawing model.drawing
                     , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
                     ]
+
+                WaitingForOtherMazeToBeDrawnStage ->
+                    []
 
                 PlayingStage ->
                     []
@@ -2445,7 +2479,8 @@ viewPopup maybePopup =
             div [ class "viewPopup_nothing" ] []
 
 
-viewButtons stage =
+viewButtons : Stage -> Bool -> Html.Styled.Html Msg
+viewButtons stage isSwitchingMaze =
     case stage of
         DrawingStage ->
             div [ class "viewButtons" ]
@@ -2458,8 +2493,16 @@ viewButtons stage =
                 , div [] [ text "Press Done/Enter when finished drawing." ]
                 ]
 
+        WaitingForOtherMazeToBeDrawnStage ->
+            if isSwitchingMaze then
+                div [ class "viewButtons" ] []
+
+            else
+                div [ class "viewButtons" ]
+                    [ div [] [ text "Waiting for opponent to finish drawing." ] ]
+
         PlayingStage ->
-            div []
+            div [ class "viewButtons" ]
                 [ div [ css [ Css.displayFlex ] ]
                     [ viewArrowButton MoveLeft "<"
                     , viewArrowButton MoveRight ">"
@@ -2470,7 +2513,7 @@ viewButtons stage =
                 ]
 
         FirstWinStage ->
-            div [] []
+            div [ class "viewButtons" ] []
 
 
 viewPopupDismissButton : String -> Html.Styled.Html Msg

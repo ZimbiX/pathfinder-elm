@@ -64,7 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
-- Prevent interaction (arrow buttons) until both mazes are in the play stage
+- Centre popup
 - Display text for whose turn it is to do what
 - Allow two players to draw their maze simultaneously on each device
 - Resume as the right player upon a page reload - some form of login?
