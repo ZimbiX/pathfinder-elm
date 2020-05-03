@@ -10,7 +10,7 @@ import Debug
 import Html exposing (Html)
 import Html.Events.Extra
 import Html.Styled exposing (a, button, div, img, text, toUnstyled)
-import Html.Styled.Attributes exposing (css, draggable, href, src)
+import Html.Styled.Attributes exposing (class, css, draggable, href, src)
 import Html.Styled.Events exposing (on, onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy exposing (lazy, lazy2)
@@ -1894,7 +1894,8 @@ view model =
     { title = "PathFinder"
     , body =
         [ div
-            [ css
+            [ class "view"
+            , css
                 [ fontFamily
                 , fontSize
                 , Css.width (Css.pct 100)
@@ -2015,7 +2016,8 @@ viewBoard model =
     in
     div
         (List.concat
-            [ [ css
+            [ [ class "viewBoard"
+              , css
                     (List.concat
                         [ [ width (px settings.boardWidth)
                           , height (px settings.boardHeight)
@@ -2034,8 +2036,16 @@ viewBoard model =
             ]
         )
         (List.concat
-            [ [ div [ css [ Css.property "backface-visibility" "hidden" ] ] (viewGrid activeMaze)
-              , div [ css [ Css.transforms [ Css.rotateY (Css.deg 180) ] ] ] (viewGrid inactiveMaze)
+            [ [ div
+                    [ class "activeMaze"
+                    , css [ Css.property "backface-visibility" "hidden" ]
+                    ]
+                    (viewGrid activeMaze)
+              , div
+                    [ class "inactiveMaze"
+                    , css [ Css.transforms [ Css.rotateY (Css.deg 180) ] ]
+                    ]
+                    (viewGrid inactiveMaze)
               ]
             , viewDrawingStage
             , [ viewPopup model.popup ]
@@ -2054,7 +2064,8 @@ viewGrid maze =
 
 viewBackground =
     div
-        [ css
+        [ class "viewBackground"
+        , css
             [ width (pct 100)
             , height (px 1400)
             , Css.position absolute
@@ -2286,7 +2297,7 @@ viewDrawing drawing =
         drawnSegments =
             drawing |> listMapConsecutively viewKeyedDrawingSegment
     in
-    Keyed.node "div" [] drawnSegments
+    Keyed.node "div" [ class "viewDrawing" ] drawnSegments
 
 
 viewKeyedDrawingSegment coordA coordB =
@@ -2352,7 +2363,7 @@ viewDrawingSegment coordA coordB =
 
 
 viewSnappedDrawingPoints snappedDrawingPoints =
-    div [] (snappedDrawingPoints |> List.map viewSnappedDrawingPoint)
+    div [ class "viewSnappedDrawingPoints" ] (snappedDrawingPoints |> List.map viewSnappedDrawingPoint)
 
 
 viewSnappedDrawingPoint snappedDrawingPoint =
@@ -2375,7 +2386,8 @@ viewPopup maybePopup =
     case maybePopup of
         Just popup ->
             div
-                [ css
+                [ class "viewPopup"
+                , css
                     [ Css.position absolute
                     , width (px 300)
                     , height (px 160)
@@ -2396,13 +2408,13 @@ viewPopup maybePopup =
                 ]
 
         Nothing ->
-            div [] []
+            div [ class "viewPopup_nothing" ] []
 
 
 viewButtons stage =
     case stage of
         DrawingStage ->
-            div []
+            div [ class "viewButtons" ]
                 [ div [ css [ Css.displayFlex ] ]
                     [ viewDoneButton
                     ]
@@ -2471,4 +2483,6 @@ viewDoneButton =
 
 
 viewGithubLink =
-    div [] [ a [ href "https://github.com/ZimbiX/pathfinder-elm" ] [ text "GitHub" ] ]
+    div
+        [ class "viewGithubLink" ]
+        [ a [ href "https://github.com/ZimbiX/pathfinder-elm" ] [ text "GitHub" ] ]

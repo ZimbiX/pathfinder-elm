@@ -65,6 +65,7 @@ $ ./scripts/build
 ### Todo
 
 - Fix popup dismiss button's right half being unclickable
+- Display text for whose turn it is to do what
 - Allow two players to draw their maze simultaneously on each device
 - Resume as the right player upon a page reload - some form of login?
     + Generate UUID to identify the user, and store in local storage - only when missing
