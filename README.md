@@ -64,7 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
-- Fix board flipping stretching sideways when widescreen
+- Prevent interaction (arrow buttons) until both mazes are in the play stage
 - Display text for whose turn it is to do what
 - Allow two players to draw their maze simultaneously on each device
 - Resume as the right player upon a page reload - some form of login?

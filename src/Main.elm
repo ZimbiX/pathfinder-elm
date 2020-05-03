@@ -34,8 +34,6 @@ settings =
     { playerMoveSpeed = 0.007
     , wallOpacitySpeed = 0.008
     , boardZoom = 2
-    , boardWidth = 640
-    , boardHeight = 480
     , mazeSwitching =
         { delaySeconds = 0.2
         , animationDurationSeconds = 0.8
@@ -53,9 +51,7 @@ gridSize =
 
 
 gridBorder =
-    { top = (settings.boardHeight - (gridSize.rowCount * gridSize.cellHeight)) / 2
-    , left = (settings.boardWidth - (gridSize.columnCount * gridSize.cellWidth)) / 2
-    }
+    { top = 32, left = 32 }
 
 
 
@@ -726,7 +722,14 @@ mouseProcessorForStageInteractions stage =
 
 updateMouseFromUnscaled : Mouse -> Model -> Model
 updateMouseFromUnscaled unscaledMouse model =
-    { model | mouse = { unscaledMouse | position = unscaledMouse.position |> zoomCoordinate } }
+    { model | mouse = { unscaledMouse | position = unscaledMouse.position |> zoomCoordinate |> toGridCoordinateFromGlobal } }
+
+
+toGridCoordinateFromGlobal : Coordinate -> Coordinate
+toGridCoordinateFromGlobal coord =
+    { x = coord.x - gridBorder.left
+    , y = coord.y - gridBorder.top
+    }
 
 
 zoomCoordinate : Coordinate -> Coordinate
@@ -1900,7 +1903,6 @@ view model =
                 , fontSize
                 , Css.width (Css.pct 100)
                 , Css.height (Css.pct 100)
-                , Css.property "perspective" "1000px"
                 ]
             ]
             [ viewBackground
@@ -1937,12 +1939,12 @@ coordsFromPosition position =
 
 xFromColumn : Float -> Float
 xFromColumn column =
-    gridBorder.left + gridSize.cellWidth * (0.5 + column)
+    gridSize.cellWidth * (0.5 + column)
 
 
 yFromRow : Float -> Float
 yFromRow row =
-    gridBorder.top + gridSize.cellHeight * (0.5 + row)
+    gridSize.cellHeight * (0.5 + row)
 
 
 
@@ -1955,12 +1957,12 @@ yFromRow row =
 
 columnFromX : Float -> Float
 columnFromX x =
-    (x - gridBorder.left) / gridSize.cellWidth - 0.5
+    x / gridSize.cellWidth - 0.5
 
 
 rowFromY : Float -> Float
 rowFromY y =
-    (y - gridBorder.top) / gridSize.cellHeight - 0.5
+    y / gridSize.cellHeight - 0.5
 
 
 roundFloat =
@@ -1982,19 +1984,52 @@ viewBoard model =
 
                 FirstWinStage ->
                     []
+
+        mouseEvents =
+            [ updateMouseOn "pointerdown"
+            , updateMouseOn "pointerup"
+            , updateMouseOn "pointermove"
+            ]
     in
     div
-        [ class "viewBoard"
-        , css
-            [ Css.property "zoom" ((settings.boardZoom * 100 |> String.fromFloat) ++ "%")
-            ]
-        ]
         (List.concat
-            [ [ viewMazesWithRotation model ]
-            , viewDrawingStage
-            , [ viewPopup model.popup ]
+            [ [ class "viewBoard"
+              , css
+                    [ Css.property "zoom" ((settings.boardZoom * 100 |> String.fromFloat) ++ "%")
+                    , width (px (gridSize.cellWidth * gridSize.columnCount + gridBorder.left * 2))
+                    , height (px (gridSize.cellHeight * gridSize.rowCount + gridBorder.top * 2))
+                    ]
+              ]
+            , mouseEvents
             ]
         )
+        [ div
+            [ css
+                [ Css.position absolute
+                , left (px gridBorder.left)
+                , top (px gridBorder.top)
+                ]
+            ]
+            (List.concat
+                [ [ div
+                        [ css
+                            []
+                        ]
+                        [ div
+                            [ css
+                                [ Css.property "perspective" "1000px"
+                                , width (px (gridSize.cellWidth * gridSize.columnCount))
+                                , height (px (gridSize.cellHeight * gridSize.rowCount))
+                                ]
+                            ]
+                            [ viewMazesWithRotation model ]
+                        ]
+                  ]
+                , viewDrawingStage
+                , [ viewPopup model.popup ]
+                ]
+            )
+        ]
 
 
 viewMazesWithRotation : Model -> Html.Styled.Html Msg
@@ -2019,41 +2054,31 @@ viewMazesWithRotation model =
 
                 NotSwitchingMaze ->
                     []
-
-        mouseEvents =
-            [ updateMouseOn "pointerdown"
-            , updateMouseOn "pointerup"
-            , updateMouseOn "pointermove"
-            ]
     in
     div
-        (List.concat
-            [ [ class "viewMazesWithRotation"
-              , css
-                    (List.concat
-                        [ [ width (px settings.boardWidth)
-                          , height (px settings.boardHeight)
-                          , Css.touchAction Css.none
-                          , Css.transformStyle Css.preserve3d
-                          , Css.transforms [ Css.rotateY (Css.deg flipDegrees) ]
+        [ class "viewMazesWithRotation"
+        , css
+            (List.concat
+                [ [ width (px (gridSize.cellWidth * gridSize.columnCount))
+                  , height (px (gridSize.cellHeight * gridSize.rowCount))
+                  , Css.touchAction Css.none
+                  , Css.transformStyle Css.preserve3d
+                  , Css.transforms [ Css.rotateY (Css.deg flipDegrees) ]
 
-                          --, Css.border3 (px 1) Css.solid (hex "#f00")
-                          ]
-                        , flipAnimateCss
-                        ]
-                    )
-              ]
-            , mouseEvents
-            ]
-        )
+                  --, Css.border3 (px 1) Css.solid (hex "#f00")
+                  ]
+                , flipAnimateCss
+                ]
+            )
+        ]
         [ div
             [ class "activeMaze"
-            , css [ Css.property "backface-visibility" "hidden" ] -- TODO: Add this to the other maze too
+            , css [ Css.property "backface-visibility" "hidden", Css.position Css.relative ]
             ]
             (viewGrid model.mazes.active)
         , div
             [ class "inactiveMaze"
-            , css [ Css.transforms [ Css.rotateY (Css.deg 180) ] ]
+            , css [ Css.transforms [ Css.rotateY (Css.deg 180) ], Css.position Css.relative ]
             ]
             (viewGrid model.mazes.inactive)
         ]
@@ -2109,8 +2134,8 @@ viewBoardCells =
             [ Css.position absolute
             , width (px (gridSize.cellWidth * gridSize.columnCount))
             , height (px (gridSize.cellHeight * gridSize.rowCount))
-            , left (px gridBorder.left)
-            , top (px gridBorder.top)
+            , left (px 0)
+            , top (px 0)
             , Css.boxShadow4 (px 0) (px 0) (px 10) (hex "#000")
             ]
         ]
@@ -2183,8 +2208,8 @@ viewPathTravelledSquare position =
             [ Css.position absolute
             , width (px (gridSize.cellWidth - gapLeft))
             , height (px (gridSize.cellHeight - gapTop))
-            , left (px (gridSize.cellWidth * position.column + gridBorder.left + gapLeft / 2))
-            , top (px (gridSize.cellHeight * position.row + gridBorder.top + gapTop / 2))
+            , left (px (gridSize.cellWidth * position.column + gapLeft / 2))
+            , top (px (gridSize.cellHeight * position.row + gapTop / 2))
             , Css.backgroundColor (hex "#79be7e")
             ]
         , draggable "false"
