@@ -39,7 +39,6 @@ settings =
         { delaySeconds = 0.2
         , animationDurationSeconds = 0.8
         }
-    , gameId = "h"
     }
 
 
@@ -86,6 +85,7 @@ type alias Model =
     , eventsQueuedForSubmission : List VersionedBackendEvent
     , navKey : Nav.Key
     , url : Url.Url
+    , gameId : String
     }
 
 
@@ -218,6 +218,10 @@ type alias VersionedBackendEvent =
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url navKey =
+    let
+        gameId =
+            gameIdFromUrl url |> Debug.log "Game ID"
+    in
     ( { mazes =
             { active = initialMaze
             , inactive = initialMaze
@@ -234,9 +238,10 @@ init flags url navKey =
       , queuedEventsForApplication = []
       , eventsQueuedForSubmission = []
       , navKey = navKey
-      , url = url |> Debug.log "Initial URL"
+      , url = url
+      , gameId = gameId
       }
-      --, requestNewEvents 0
+      --, requestNewEvents gameId 0
     , Cmd.none
     )
 
@@ -249,6 +254,17 @@ initialMaze =
     , stage = DrawingStage
     , pathTravelled = []
     }
+
+
+gameIdFromUrl : Url.Url -> String
+gameIdFromUrl url =
+    case url.fragment of
+        Just fragment ->
+            fragment
+
+        Nothing ->
+            -- TODO: Generate the game ID and set it in the URL
+            "h"
 
 
 
@@ -331,7 +347,7 @@ update msg model =
             )
 
         RequestNewEventsFromBackend ->
-            ( model, requestNewEvents model.gameStateVersion )
+            ( model, requestNewEvents model.gameId model.gameStateVersion )
 
         GotEventsFromBackend result ->
             case result of
@@ -506,9 +522,10 @@ queueNewEventsForApplication events model =
             )
 
 
-requestNewEvents afterVersion =
+requestNewEvents : String -> Int -> Cmd Msg
+requestNewEvents gameId afterVersion =
     Http.get
-        { url = "https://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?id=" ++ settings.gameId ++ "&after=" ++ String.fromInt afterVersion
+        { url = "https://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?id=" ++ gameId ++ "&after=" ++ String.fromInt afterVersion
         , expect = Http.expectString GotEventsFromBackend
         }
 
@@ -687,8 +704,8 @@ formUrlencoded object =
         |> String.join "&"
 
 
-submitEvent : VersionedBackendEvent -> Cmd Msg
-submitEvent versionedEvent =
+submitEvent : String -> VersionedBackendEvent -> Cmd Msg
+submitEvent gameId versionedEvent =
     let
         encodedEvent =
             case versionedEvent.event of
@@ -708,7 +725,7 @@ submitEvent versionedEvent =
                     moveEventEncoder MoveDown
 
         body =
-            [ ( "id", settings.gameId )
+            [ ( "id", gameId )
             , ( "version", String.fromInt versionedEvent.version )
             , ( "event", Json.Encode.encode 0 encodedEvent )
             ]
@@ -728,7 +745,7 @@ submitQueuedEvents model =
             model.eventsQueuedForSubmission
 
         requests =
-            List.map submitEvent versionedEvents
+            List.map (submitEvent model.gameId) versionedEvents
 
         newVersion =
             model.gameStateVersion + List.length versionedEvents
