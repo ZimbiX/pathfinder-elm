@@ -3,6 +3,7 @@ module Main exposing (Model, Msg(..), init, main, update, view)
 import Basics.Extra exposing (fractionalModBy)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
+import Browser.Navigation as Nav
 import Css exposing (absolute, backgroundColor, border3, height, hex, left, opacity, pct, px, rad, rotate, solid, top, transform, width)
 import Css.Animations
 import Css.Transitions
@@ -59,11 +60,13 @@ gridBorder =
 
 
 main =
-    Browser.document
+    Browser.application
         { init = init
         , update = update
         , view = view
         , subscriptions = subscriptions
+        , onUrlChange = UrlChanged
+        , onUrlRequest = LinkClicked
         }
 
 
@@ -81,6 +84,8 @@ type alias Model =
     , gameStateVersion : Int
     , queuedEventsForApplication : List VersionedBackendEvent
     , eventsQueuedForSubmission : List VersionedBackendEvent
+    , navKey : Nav.Key
+    , url : Url.Url
     }
 
 
@@ -211,8 +216,8 @@ type alias VersionedBackendEvent =
     }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
+init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url navKey =
     ( { mazes =
             { active = initialMaze
             , inactive = initialMaze
@@ -228,6 +233,8 @@ init _ =
       , gameStateVersion = 0
       , queuedEventsForApplication = []
       , eventsQueuedForSubmission = []
+      , navKey = navKey
+      , url = url |> Debug.log "Initial URL"
       }
       --, requestNewEvents 0
     , Cmd.none
@@ -258,6 +265,8 @@ type Msg
     | RequestNewEventsFromBackend
     | GotEventsFromBackend (Result Http.Error String)
     | SentEventToBackend (Result Http.Error String)
+    | LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
 
 
 type MoveDirection
@@ -345,6 +354,19 @@ update msg model =
 
                 Err requestErr ->
                     requestErr |> Debug.log "Error submitting event" |> (\_ -> ( model, Cmd.none ))
+
+        LinkClicked urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.navKey (Url.toString url) )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        UrlChanged url ->
+            ( { model | url = url |> Debug.log "New URL" }
+            , Cmd.none
+            )
 
 
 updateActiveMaze : (Maze -> Maze) -> Model -> Model

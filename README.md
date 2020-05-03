@@ -64,13 +64,14 @@ $ ./scripts/build
 
 ### Todo
 
-- Display text for whose turn it is to do what
+- Read game id from URL hash
+- Generate UUID to identify the game on init - if not provided in URL
+- Generate UUID to identify the user, and store in local storage - only when missing
+- Resume as the right player upon a page reload
 - Allow two players to draw their maze simultaneously on each device
-- Resume as the right player upon a page reload - some form of login?
-    + Generate UUID to identify the user, and store in local storage - only when missing
+- Display text for whose turn it is to do what
 - Instantly replay game history upon page reload part-way through a game (no animation), but preserve how receiving an event from the opponent applies it as normal interaction (with animation)
 - Disable local interaction while it's the opponent's move
-- Generate UUID to identify the game on init - if not provided in URL
 - Read game id from URL
 - Display link for sharing with a friend to play against
 - Refactor to provide an event for the popup dismiss button
@@ -78,6 +79,7 @@ $ ./scripts/build
 - Count moves and wall hits and show this in the winning message
 - Prevent touchscreen button lag
 - Verify maze is possible to win before leaving drawing stage
+- User login
 - Allow changing grid size
 - Saving a maze to be able to reuse it
 - Fade in new sections of traversed path
