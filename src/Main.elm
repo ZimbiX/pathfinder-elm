@@ -2451,18 +2451,28 @@ viewSnappedDrawingPoint snappedDrawingPoint =
 
 
 viewPopup maybePopup =
+    let
+        w =
+            300
+
+        h =
+            160
+
+        border =
+            2
+    in
     case maybePopup of
         Just popup ->
             div
                 [ class "viewPopup"
                 , css
                     [ Css.position absolute
-                    , width (px 300)
-                    , height (px 160)
-                    , left (px 168)
-                    , top (px 150)
+                    , width (px w)
+                    , height (px h)
+                    , top (px ((gridSize.cellHeight * gridSize.rowCount * 0.95) / 2 - h / 2))
+                    , left (px (((gridSize.cellWidth * gridSize.columnCount) / 2 - w / 2) - border))
                     , backgroundColor (hex "#01b5b5")
-                    , Css.border3 (px 2) Css.solid (hex "#000")
+                    , Css.border3 (px border) Css.solid (hex "#000")
                     , Css.textAlign Css.center
                     , Css.displayFlex
                     , Css.flexDirection Css.column

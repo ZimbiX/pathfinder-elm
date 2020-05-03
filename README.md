@@ -64,7 +64,6 @@ $ ./scripts/build
 
 ### Todo
 
-- Centre popup
 - Display text for whose turn it is to do what
 - Allow two players to draw their maze simultaneously on each device
 - Resume as the right player upon a page reload - some form of login?
