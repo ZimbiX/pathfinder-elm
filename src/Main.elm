@@ -89,9 +89,8 @@ type alias Model =
     , eventsQueuedForSubmission : List VersionedBackendEvent
     , navKey : Nav.Key
     , url : Url.Url
-    , gameId : String
     , currentSeed : Seed
-    , currentUuid : Maybe Uuid.Uuid
+    , gameId : String
     }
 
 
@@ -224,10 +223,6 @@ type alias VersionedBackendEvent =
 
 init : ( Int, List Int ) -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init ( seed, seedExtension ) url navKey =
-    let
-        gameId =
-            gameIdFromUrl url |> Debug.log "Game ID"
-    in
     ( { mazes =
             { active = initialMaze
             , inactive = initialMaze
@@ -245,10 +240,10 @@ init ( seed, seedExtension ) url navKey =
       , eventsQueuedForSubmission = []
       , navKey = navKey
       , url = url
-      , gameId = gameId
       , currentSeed = initialSeed seed seedExtension
-      , currentUuid = Nothing
+      , gameId = ""
       }
+        |> assignGameId url
       --, requestNewEvents gameId 0
     , Cmd.none
     )
@@ -264,13 +259,22 @@ initialMaze =
     }
 
 
-gameIdFromUrl : Url.Url -> String
-gameIdFromUrl url =
+assignGameId : Url.Url -> Model -> Model
+assignGameId url model =
+    case readGameIdFromUrl url of
+        Just gameIdFromUrl ->
+            { model | gameId = gameIdFromUrl |> Debug.log "Game ID" }
+
+        Nothing ->
+            model |> generateGameId
+
+
+readGameIdFromUrl : Url.Url -> Maybe String
+readGameIdFromUrl url =
     url
         |> fragmentUrlToQueryUrl
         |> Url.Parser.parse (Url.Parser.query (Url.Parser.Query.string "gameId"))
         |> Maybe.withDefault Nothing
-        |> Maybe.withDefault "h"
 
 
 fragmentUrlToQueryUrl : Url.Url -> Url.Url
@@ -279,6 +283,18 @@ fragmentUrlToQueryUrl url =
         | path = ""
         , query = url.fragment
         , fragment = Nothing
+    }
+
+
+generateGameId : Model -> Model
+generateGameId model =
+    let
+        ( newUuid, newSeed ) =
+            step Uuid.generator model.currentSeed
+    in
+    { model
+        | gameId = newUuid |> Uuid.toString |> Debug.log "Game ID"
+        , currentSeed = newSeed
     }
 
 
@@ -298,7 +314,6 @@ type Msg
     | SentEventToBackend (Result Http.Error String)
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
-    | NewUuid
 
 
 type MoveDirection
@@ -397,19 +412,6 @@ update msg model =
 
         UrlChanged url ->
             ( { model | url = url |> Debug.log "New URL" }
-            , Cmd.none
-            )
-
-        NewUuid ->
-            let
-                ( newUuid, newSeed ) =
-                    step Uuid.generator model.currentSeed
-            in
-            -- 2.: Store the new seed
-            ( { model
-                | currentUuid = Just newUuid
-                , currentSeed = newSeed
-              }
             , Cmd.none
             )
 
@@ -2008,28 +2010,10 @@ view model =
             , lazy viewBoard model
             , lazy2 viewButtons model.mazes.active.stage (model.switchingMaze /= NotSwitchingMaze)
             , viewGithubLink
-            , viewUuid model
             ]
             |> toUnstyled
         ]
     }
-
-
-viewUuid : Model -> Html.Styled.Html Msg
-viewUuid model =
-    let
-        uuidText =
-            case model.currentUuid of
-                Nothing ->
-                    "No Uuid was created so far"
-
-                Just uuid ->
-                    "Current Uuid: " ++ Uuid.toString uuid
-    in
-    div []
-        [ button [ onClick NewUuid ] [ text "Create a new Uuid!" ]
-        , text uuidText
-        ]
 
 
 fontFamily =
