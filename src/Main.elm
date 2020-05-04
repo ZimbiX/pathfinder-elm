@@ -22,7 +22,9 @@ import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Arrows
 import List.Extra
 import Maybe.Extra
+import Prng.Uuid as Uuid
 import Process
+import Random.Pcg.Extended exposing (Seed, initialSeed, step)
 import Task
 import Url
 import Url.Parser
@@ -88,6 +90,8 @@ type alias Model =
     , navKey : Nav.Key
     , url : Url.Url
     , gameId : String
+    , currentSeed : Seed
+    , currentUuid : Maybe Uuid.Uuid
     }
 
 
@@ -218,8 +222,8 @@ type alias VersionedBackendEvent =
     }
 
 
-init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url navKey =
+init : ( Int, List Int ) -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init ( seed, seedExtension ) url navKey =
     let
         gameId =
             gameIdFromUrl url |> Debug.log "Game ID"
@@ -242,6 +246,8 @@ init flags url navKey =
       , navKey = navKey
       , url = url
       , gameId = gameId
+      , currentSeed = initialSeed seed seedExtension
+      , currentUuid = Nothing
       }
       --, requestNewEvents gameId 0
     , Cmd.none
@@ -292,6 +298,7 @@ type Msg
     | SentEventToBackend (Result Http.Error String)
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
+    | NewUuid
 
 
 type MoveDirection
@@ -390,6 +397,19 @@ update msg model =
 
         UrlChanged url ->
             ( { model | url = url |> Debug.log "New URL" }
+            , Cmd.none
+            )
+
+        NewUuid ->
+            let
+                ( newUuid, newSeed ) =
+                    step Uuid.generator model.currentSeed
+            in
+            -- 2.: Store the new seed
+            ( { model
+                | currentUuid = Just newUuid
+                , currentSeed = newSeed
+              }
             , Cmd.none
             )
 
@@ -1988,10 +2008,28 @@ view model =
             , lazy viewBoard model
             , lazy2 viewButtons model.mazes.active.stage (model.switchingMaze /= NotSwitchingMaze)
             , viewGithubLink
+            , viewUuid model
             ]
             |> toUnstyled
         ]
     }
+
+
+viewUuid : Model -> Html.Styled.Html Msg
+viewUuid model =
+    let
+        uuidText =
+            case model.currentUuid of
+                Nothing ->
+                    "No Uuid was created so far"
+
+                Just uuid ->
+                    "Current Uuid: " ++ Uuid.toString uuid
+    in
+    div []
+        [ button [ onClick NewUuid ] [ text "Create a new Uuid!" ]
+        , text uuidText
+        ]
 
 
 fontFamily =
