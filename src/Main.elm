@@ -25,6 +25,8 @@ import Maybe.Extra
 import Process
 import Task
 import Url
+import Url.Parser
+import Url.Parser.Query
 
 
 
@@ -258,13 +260,20 @@ initialMaze =
 
 gameIdFromUrl : Url.Url -> String
 gameIdFromUrl url =
-    case url.fragment of
-        Just fragment ->
-            fragment
+    url
+        |> fragmentUrlToQueryUrl
+        |> Url.Parser.parse (Url.Parser.query (Url.Parser.Query.string "gameId"))
+        |> Maybe.withDefault Nothing
+        |> Maybe.withDefault "h"
 
-        Nothing ->
-            -- TODO: Generate the game ID and set it in the URL
-            "h"
+
+fragmentUrlToQueryUrl : Url.Url -> Url.Url
+fragmentUrlToQueryUrl url =
+    { url
+        | path = ""
+        , query = url.fragment
+        , fragment = Nothing
+    }
 
 
 

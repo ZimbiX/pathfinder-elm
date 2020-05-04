@@ -64,7 +64,6 @@ $ ./scripts/build
 
 ### Todo
 
-- Make URL hash a key-val pair for game id
 - Generate UUID to identify the game on init - if not provided in URL
 - Generate UUID to identify the user, and store in local storage - only when missing
 - Resume as the right player upon a page reload
