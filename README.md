@@ -66,6 +66,7 @@ $ ./scripts/build
 
 - Prevent creating gold when clicking to dismiss the 'maze not possible' popup
 - Allow Enter to dismiss the 'maze not possible' popup
+- Prompt for player names
 - When clicking 'New game', bring along the opponent via an event through the backend containing the new game id - the id being generated way in advance so the link is in sync
 - Generate UUID to identify the user, and store in local storage - only when missing
 - Resume as the right player upon a page reload
