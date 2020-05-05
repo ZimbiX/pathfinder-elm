@@ -64,6 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
+- Add gameId to URL if not present
 - Generate UUID to identify the user, and store in local storage - only when missing
 - Resume as the right player upon a page reload
 - Allow two players to draw their maze simultaneously on each device
