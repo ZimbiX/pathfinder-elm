@@ -223,29 +223,28 @@ type alias VersionedBackendEvent =
 
 init : ( Int, List Int ) -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init ( seed, seedExtension ) url navKey =
-    ( { mazes =
-            { active = initialMaze
-            , inactive = initialMaze
-            }
-      , mouse =
-            { position = { x = 0, y = 0 }
-            , buttonDown = NoMouseButton
-            }
-      , drawing = []
-      , snappedDrawingPoints = []
-      , popup = Nothing
-      , switchingMaze = NotSwitchingMaze
-      , gameStateVersion = 0
-      , queuedEventsForApplication = []
-      , eventsQueuedForSubmission = []
-      , navKey = navKey
-      , url = url
-      , currentSeed = initialSeed seed seedExtension
-      , gameId = ""
-      }
+    ({ mazes =
+        { active = initialMaze
+        , inactive = initialMaze
+        }
+     , mouse =
+        { position = { x = 0, y = 0 }
+        , buttonDown = NoMouseButton
+        }
+     , drawing = []
+     , snappedDrawingPoints = []
+     , popup = Nothing
+     , switchingMaze = NotSwitchingMaze
+     , gameStateVersion = 0
+     , queuedEventsForApplication = []
+     , eventsQueuedForSubmission = []
+     , navKey = navKey
+     , url = url
+     , currentSeed = initialSeed seed seedExtension
+     , gameId = ""
+     }
         |> assignGameId url
-      --, requestNewEvents gameId 0
-    , Cmd.none
+     --|> startEventPolling
     )
 
 
@@ -259,14 +258,22 @@ initialMaze =
     }
 
 
-assignGameId : Url.Url -> Model -> Model
+assignGameId : Url.Url -> Model -> ( Model, Cmd Msg )
 assignGameId url model =
     case readGameIdFromUrl url of
         Just gameIdFromUrl ->
-            { model | gameId = gameIdFromUrl |> Debug.log "Game ID" }
+            ( { model | gameId = gameIdFromUrl |> Debug.log "Game ID" }
+            , Cmd.none
+            )
 
         Nothing ->
-            model |> generateGameId
+            model
+                |> generateGameId
+                |> (\newModel ->
+                        ( newModel
+                        , Nav.pushUrl newModel.navKey ("#gameId=" ++ newModel.gameId)
+                        )
+                   )
 
 
 readGameIdFromUrl : Url.Url -> Maybe String
@@ -296,6 +303,12 @@ generateGameId model =
         | gameId = newUuid |> Uuid.toString |> Debug.log "Game ID"
         , currentSeed = newSeed
     }
+
+
+startEventPolling : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+startEventPolling ( model, cmd ) =
+    ( model, cmd )
+        |> Tuple.mapSecond (\c -> Cmd.batch [ c, requestNewEvents model.gameId 0 ])
 
 
 
@@ -405,7 +418,7 @@ update msg model =
         LinkClicked urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( model, Nav.pushUrl model.navKey (Url.toString url) )
+                    ( model, url |> Url.toString |> Nav.pushUrl model.navKey )
 
                 Browser.External href ->
                     ( model, Nav.load href )
