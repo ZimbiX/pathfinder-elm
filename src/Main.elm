@@ -479,43 +479,38 @@ applyNextEventFromServerIfReady model =
                     else
                         model
 
-                --expectedNextVersion =
-                --    model.gameStateVersion + 1
+                isSwitchingMaze =
+                    model.switchingMaze /= NotSwitchingMaze
             in
-            --if firstEvent.version == expectedNextVersion then
-            case firstEvent.event of
-                MazeDrawn mazeBackend ->
-                    model
-                        |> updateActiveMaze
-                            (\maze ->
-                                { maze
-                                    | golds = mazeBackend.golds
-                                    , walls = mazeBackend.walls |> wallsFromBackendWalls
-                                }
-                            )
-                        |> completeMazeDrawing
-                        |> swapMazes
-                        |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
+            if isSwitchingMaze then
+                model
 
-                MoveLeftBackendEvent ->
-                    moveIfReady MoveLeft
+            else
+                case firstEvent.event of
+                    MazeDrawn mazeBackend ->
+                        model
+                            |> updateActiveMaze
+                                (\maze ->
+                                    { maze
+                                        | golds = mazeBackend.golds
+                                        , walls = mazeBackend.walls |> wallsFromBackendWalls
+                                    }
+                                )
+                            |> completeMazeDrawing
+                            |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
 
-                MoveRightBackendEvent ->
-                    moveIfReady MoveRight
+                    MoveLeftBackendEvent ->
+                        moveIfReady MoveLeft
 
-                MoveUpBackendEvent ->
-                    moveIfReady MoveUp
+                    MoveRightBackendEvent ->
+                        moveIfReady MoveRight
 
-                MoveDownBackendEvent ->
-                    moveIfReady MoveDown
+                    MoveUpBackendEvent ->
+                        moveIfReady MoveUp
 
-        --unhandledEvent ->
-        --    Debug.log "Unhandled application of event" unhandledEvent
-        --        |> (\_ -> model)
-        --        |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
-        --else
-        --    Debug.log ("Warning: Unexpected event version: " ++ String.fromInt firstEvent.version ++ " /= " ++ String.fromInt expectedNextVersion) ""
-        --        |> (\_ -> model)
+                    MoveDownBackendEvent ->
+                        moveIfReady MoveDown
+
         Nothing ->
             model
 
