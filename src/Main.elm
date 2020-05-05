@@ -1,5 +1,6 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
+import AStar
 import Basics.Extra exposing (fractionalModBy)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
@@ -25,6 +26,7 @@ import Maybe.Extra
 import Prng.Uuid as Uuid
 import Process
 import Random.Pcg.Extended exposing (Seed, initialSeed, step)
+import Set
 import Task
 import Url
 import Url.Parser
@@ -359,8 +361,8 @@ update msg model =
 
                 Nothing ->
                     model
-                        |> completeMazeDrawingIfEnterPressed rawKey
                         |> dismissPopupIfEnterPressed rawKey
+                        |> completeMazeDrawingIfEnterPressed rawKey
                         |> switchMazeIfMPressed rawKey
                         |> submitQueuedEvents
 
@@ -1193,7 +1195,20 @@ dismissPopupIfEnterPressed rawKey model =
 dismissPopup : Model -> Model
 dismissPopup model =
     { model | popup = Nothing }
-        |> startSwitchingMazesIfOtherMazeNotWon
+        |> (\newModel ->
+                case model.mazes.active.stage of
+                    DrawingStage ->
+                        newModel
+
+                    WaitingForOtherMazeToBeDrawnStage ->
+                        newModel
+
+                    PlayingStage ->
+                        newModel |> startSwitchingMazesIfOtherMazeNotWon
+
+                    FirstWinStage ->
+                        newModel
+           )
 
 
 switchMazeIfMPressed : RawKey -> Model -> Model
@@ -1855,11 +1870,11 @@ completeMazeDrawing model =
         activeMaze =
             model.mazes.active
 
+        isApplyingServerEvent =
+            not (List.isEmpty model.queuedEventsForApplication)
+
         complete =
             let
-                isApplyingServerEvent =
-                    not (List.isEmpty model.queuedEventsForApplication)
-
                 eventsQueuedForSubmission =
                     if isApplyingServerEvent then
                         []
@@ -1907,7 +1922,14 @@ completeMazeDrawing model =
     in
     case activeMaze.stage of
         DrawingStage ->
-            complete
+            if isApplyingServerEvent then
+                complete
+
+            else if mazeIsPossibleToWin activeMaze then
+                complete
+
+            else
+                { model | popup = Just { messageLines = [ "Maze is not possible to win!" ] } }
 
         WaitingForOtherMazeToBeDrawnStage ->
             -- Impossible to get to?
@@ -1918,6 +1940,47 @@ completeMazeDrawing model =
 
         FirstWinStage ->
             model
+
+
+mazeIsPossibleToWin : Maze -> Bool
+mazeIsPossibleToWin maze =
+    let
+        toPositionTuple position =
+            ( position.column |> round, position.row |> round )
+
+        fromPositionTuple ( column, row ) =
+            { column = column |> toFloat, row = row |> toFloat }
+
+        pathFromGoldToPlayer gold =
+            AStar.findPath
+                AStar.straightLineCost
+                getBranchPositions
+                (gold |> toPositionTuple)
+                (maze.position |> toPositionTuple)
+                |> Debug.log "found path"
+
+        getBranchPositions ( column, row ) =
+            [ ( column + 1, row )
+            , ( column - 1, row )
+            , ( column, row + 1 )
+            , ( column, row - 1 )
+            ]
+                |> List.filter (\positionTuple -> withinBoard (fromPositionTuple positionTuple))
+                |> List.filter
+                    (\branchPositionTuple ->
+                        not
+                            (wallExistsBetweenPoints maze.walls
+                                (fromPositionTuple ( column, row ))
+                                (fromPositionTuple branchPositionTuple)
+                            )
+                    )
+                |> Set.fromList
+    in
+    if List.isEmpty maze.golds then
+        False
+
+    else
+        List.any (\gold -> pathFromGoldToPlayer gold /= Nothing) maze.golds
 
 
 endGameIfWon : Model -> Model
@@ -2702,6 +2765,7 @@ viewButtons stage isSwitchingMaze =
                     [ viewDoneButton
                     ]
                 , div [] [ text "Draw walls with your mouse/finger." ]
+                , div [] [ text "Drag player to reposition." ]
                 , div [] [ text "Click/tap to place a gold." ]
                 , div [] [ text "Hold the right mouse button to remove." ]
                 , div [] [ text "Press Done/Enter when finished drawing." ]
