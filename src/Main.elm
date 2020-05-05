@@ -223,29 +223,28 @@ type alias VersionedBackendEvent =
 
 init : ( Int, List Int ) -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init ( seed, seedExtension ) url navKey =
-    ({ mazes =
+    { mazes =
         { active = initialMaze
         , inactive = initialMaze
         }
-     , mouse =
+    , mouse =
         { position = { x = 0, y = 0 }
         , buttonDown = NoMouseButton
         }
-     , drawing = []
-     , snappedDrawingPoints = []
-     , popup = Nothing
-     , switchingMaze = NotSwitchingMaze
-     , gameStateVersion = 0
-     , queuedEventsForApplication = []
-     , eventsQueuedForSubmission = []
-     , navKey = navKey
-     , url = url
-     , currentSeed = initialSeed seed seedExtension
-     , gameId = ""
-     }
+    , drawing = []
+    , snappedDrawingPoints = []
+    , popup = Nothing
+    , switchingMaze = NotSwitchingMaze
+    , gameStateVersion = 0
+    , queuedEventsForApplication = []
+    , eventsQueuedForSubmission = []
+    , navKey = navKey
+    , url = url
+    , currentSeed = initialSeed seed seedExtension
+    , gameId = ""
+    }
         |> assignGameId url
-     --|> startEventPolling
-    )
+        |> startEventPolling
 
 
 initialMaze =
