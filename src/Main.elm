@@ -101,7 +101,8 @@ type alias Mazes =
 
 
 type alias Maze =
-    { position : Position
+    { creatorName : String
+    , position : Position
     , currentMove : CurrentMove
     , walls : Walls
     , golds : Golds
@@ -202,7 +203,8 @@ type SwitchingMazeState
 
 
 type alias MazeBackend =
-    { walls : List WallBackend
+    { creatorName : String
+    , walls : List WallBackend
     , golds : List Gold
     }
 
@@ -224,8 +226,8 @@ type alias VersionedBackendEvent =
 init : ( Int, List Int ) -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init ( seed, seedExtension ) url navKey =
     { mazes =
-        { active = initialMaze
-        , inactive = initialMaze
+        { active = initialMaze "Player 1"
+        , inactive = initialMaze "Player 2"
         }
     , mouse =
         { position = { x = 0, y = 0 }
@@ -247,8 +249,9 @@ init ( seed, seedExtension ) url navKey =
         |> startEventPolling
 
 
-initialMaze =
-    { position = { column = 0, row = 0 }
+initialMaze creatorName =
+    { creatorName = creatorName
+    , position = { column = 0, row = 0 }
     , currentMove = Nothing
     , walls = []
     , golds = []
@@ -326,6 +329,7 @@ type Msg
     | SentEventToBackend (Result Http.Error String)
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
+    | PlayAgain
 
 
 type MoveDirection
@@ -426,6 +430,9 @@ update msg model =
             ( { model | url = url |> Debug.log "New URL" }
             , Cmd.none
             )
+
+        PlayAgain ->
+            ( model, Cmd.batch [ Nav.pushUrl model.navKey "/", Nav.reload ] )
 
 
 updateActiveMaze : (Maze -> Maze) -> Model -> Model
@@ -595,8 +602,9 @@ backendEventDecoder =
                 (Json.Decode.field "data"
                     (Json.Decode.map
                         MazeDrawn
-                        (Json.Decode.map2
+                        (Json.Decode.map3
                             MazeBackend
+                            (Json.Decode.field "creatorName" Json.Decode.string)
                             (Json.Decode.field "walls"
                                 (Json.Decode.list
                                     (Json.Decode.map3
@@ -700,7 +708,8 @@ mazeDrawnEventEncoder mazeBackend =
         [ ( "name", Json.Encode.string "MazeDrawn" )
         , ( "data"
           , Json.Encode.object
-                [ ( "walls"
+                [ ( "creatorName", Json.Encode.string mazeBackend.creatorName )
+                , ( "walls"
                   , Json.Encode.list
                         (\wall ->
                             let
@@ -1173,7 +1182,12 @@ dismissPopupIfEnterPressed : RawKey -> Model -> Model
 dismissPopupIfEnterPressed rawKey model =
     case Keyboard.anyKeyUpper rawKey of
         Just Enter ->
-            model |> dismissPopup
+            case model.popup of
+                Just _ ->
+                    model |> dismissPopup
+
+                Nothing ->
+                    model
 
         _ ->
             model
@@ -1182,6 +1196,7 @@ dismissPopupIfEnterPressed rawKey model =
 dismissPopup : Model -> Model
 dismissPopup model =
     { model | popup = Nothing }
+        |> startSwitchingMazesIfOtherMazeNotWon
 
 
 switchMazeIfMPressed : RawKey -> Model -> Model
@@ -1806,7 +1821,8 @@ completeMazeDrawing model =
                             [ model.eventsQueuedForSubmission
                             , [ { event =
                                     MazeDrawn
-                                        { walls = activeMaze.walls |> backendWallsFromWalls
+                                        { creatorName = activeMaze.creatorName
+                                        , walls = activeMaze.walls |> backendWallsFromWalls
                                         , golds = activeMaze.golds
                                         }
                                 , version = model.gameStateVersion + List.length model.eventsQueuedForSubmission + 1
@@ -2007,6 +2023,13 @@ mouseButtonDecoder =
 
 view : Model -> Browser.Document Msg
 view model =
+    let
+        stage =
+            model.mazes.active.stage
+
+        isSwitching =
+            model.switchingMaze /= NotSwitchingMaze
+    in
     { title = "PathFinder"
     , body =
         [ div
@@ -2018,9 +2041,14 @@ view model =
                 , Css.height (Css.pct 100)
                 ]
             ]
-            [ viewBackground
+            [ viewInstructions
+                model.mazes.active.creatorName
+                model.mazes.inactive.creatorName
+                stage
+                isSwitching
+            , viewBackground
             , lazy viewBoard model
-            , lazy2 viewButtons model.mazes.active.stage (model.switchingMaze /= NotSwitchingMaze)
+            , lazy2 viewButtons stage isSwitching
             , viewGithubLink
             ]
             |> toUnstyled
@@ -2033,7 +2061,7 @@ fontFamily =
 
 
 fontSize =
-    Css.fontSize (px 30)
+    Css.fontSize (px 20)
 
 
 positionFromCoordinate : Coordinate -> Position
@@ -2569,6 +2597,29 @@ viewPopup maybePopup =
 
         Nothing ->
             div [ class "viewPopup_nothing" ] []
+
+
+viewInstructions : String -> String -> Stage -> Bool -> Html.Styled.Html Msg
+viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage isSwitching =
+    div [ class "viewInstructions" ]
+        [ if isSwitching then
+            text ""
+
+          else
+            case stage of
+                DrawingStage ->
+                    text (inactiveMazeCreatorName ++ " please look away. " ++ activeMazeCreatorName ++ " can now draw the level that " ++ inactiveMazeCreatorName ++ " will later play.")
+
+                WaitingForOtherMazeToBeDrawnStage ->
+                    --This should not happen
+                    text ""
+
+                PlayingStage ->
+                    text (inactiveMazeCreatorName ++ ", it's your turn!")
+
+                FirstWinStage ->
+                    a [ href "#", onClick PlayAgain ] [ text "Play again!" ]
+        ]
 
 
 viewButtons : Stage -> Bool -> Html.Styled.Html Msg
