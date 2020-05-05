@@ -2044,6 +2044,7 @@ view model =
             , viewBackground
             , lazy viewBoard model
             , lazy2 viewButtons stage isSwitching
+            , viewNewGameLink
             , viewGithubLink
             ]
             |> toUnstyled
@@ -2596,7 +2597,7 @@ viewPopup maybePopup =
 
 viewInstructions : String -> String -> Stage -> Bool -> Html.Styled.Html Msg
 viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage isSwitching =
-    div [ class "viewInstructions" ]
+    div [ class "viewInstructions", css [ Css.float Css.left ] ]
         [ if isSwitching then
             text ""
 
@@ -2613,8 +2614,13 @@ viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage isSwitching
                     text (inactiveMazeCreatorName ++ ", it's your turn!")
 
                 FirstWinStage ->
-                    a [ href "#", onClick PlayAgain ] [ text "Play again!" ]
+                    newGameLink [ text "Play again!" ]
         ]
+
+
+newGameLink : List (Html.Styled.Html Msg) -> Html.Styled.Html Msg
+newGameLink children =
+    a [ href "#", onClick PlayAgain ] children
 
 
 viewButtons : Stage -> Bool -> Html.Styled.Html Msg
@@ -2695,6 +2701,10 @@ viewDoneButton =
         , onClick DoneButtonPressed
         ]
         [ text "Done" ]
+
+
+viewNewGameLink =
+    newGameLink [ text "New game" ]
 
 
 viewGithubLink =
