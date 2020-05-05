@@ -64,6 +64,9 @@ $ ./scripts/build
 
 ### Todo
 
+- Drag player to reposition
+- Verify maze is possible to win before leaving drawing stage
+- When clicking 'New game', bring along the opponent via an event through the backend containing the new game id - the id being generated way in advance so the link is in sync
 - Generate UUID to identify the user, and store in local storage - only when missing
 - Resume as the right player upon a page reload
 - Allow two players to draw their maze simultaneously on each device
@@ -74,7 +77,6 @@ $ ./scripts/build
 - Call `switchMazes` from somewhere better
 - Count moves and wall hits and show this in the winning message
 - Prevent touchscreen button lag
-- Verify maze is possible to win before leaving drawing stage
 - User login
 - Allow changing grid size
 - Saving a maze to be able to reuse it
@@ -89,6 +91,5 @@ $ ./scripts/build
 - Deduplicate walls when finishing drawing
 - Deduplicate golds
 - Deduplicate path travelled
-- Drag player to reposition
 - Different background colour for each maze within a game
 - Compensate for overshooting the point of collision in `returnToOriginIfPathUnclear`
