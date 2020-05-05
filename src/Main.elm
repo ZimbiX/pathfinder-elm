@@ -82,6 +82,7 @@ type alias Model =
     , mouse : Mouse
     , drawing : Drawing
     , snappedDrawingPoints : SnappedDrawingPoints
+    , draggingPlayer : Bool
     , popup : Maybe Popup
     , switchingMaze : SwitchingMazeState
     , gameStateVersion : Int
@@ -203,7 +204,8 @@ type SwitchingMazeState
 
 
 type alias MazeBackend =
-    { creatorName : String
+    { playerPosition : Position
+    , creatorName : String
     , walls : List WallBackend
     , golds : List Gold
     }
@@ -235,6 +237,7 @@ init ( seed, seedExtension ) url navKey =
         }
     , drawing = []
     , snappedDrawingPoints = []
+    , draggingPlayer = False
     , popup = Nothing
     , switchingMaze = NotSwitchingMaze
     , gameStateVersion = 0
@@ -492,7 +495,8 @@ applyNextEventFromServerIfReady model =
                             |> updateActiveMaze
                                 (\maze ->
                                     { maze
-                                        | golds = mazeBackend.golds
+                                        | position = mazeBackend.playerPosition
+                                        , golds = mazeBackend.golds
                                         , walls = mazeBackend.walls |> wallsFromBackendWalls
                                     }
                                 )
@@ -597,31 +601,28 @@ backendEventDecoder =
                 (Json.Decode.field "data"
                     (Json.Decode.map
                         MazeDrawn
-                        (Json.Decode.map3
+                        (Json.Decode.map4
                             MazeBackend
+                            (Json.Decode.field "playerPosition" positionDecoder)
                             (Json.Decode.field "creatorName" Json.Decode.string)
-                            (Json.Decode.field "walls"
-                                (Json.Decode.list
-                                    (Json.Decode.map3
-                                        WallBackend
-                                        (Json.Decode.field "column" Json.Decode.float)
-                                        (Json.Decode.field "row" Json.Decode.float)
-                                        (Json.Decode.field "orientation" orientationDecoder)
-                                    )
-                                )
-                            )
-                            (Json.Decode.field "golds"
-                                (Json.Decode.list
-                                    (Json.Decode.map2
-                                        Position
-                                        (Json.Decode.field "column" Json.Decode.float)
-                                        (Json.Decode.field "row" Json.Decode.float)
-                                    )
-                                )
-                            )
+                            (Json.Decode.field "walls" (Json.Decode.list wallDecoder))
+                            (Json.Decode.field "golds" (Json.Decode.list positionDecoder))
                         )
                     )
                 )
+
+        positionDecoder =
+            Json.Decode.map2
+                Position
+                (Json.Decode.field "column" Json.Decode.float)
+                (Json.Decode.field "row" Json.Decode.float)
+
+        wallDecoder =
+            Json.Decode.map3
+                WallBackend
+                (Json.Decode.field "column" Json.Decode.float)
+                (Json.Decode.field "row" Json.Decode.float)
+                (Json.Decode.field "orientation" orientationDecoder)
     in
     Json.Decode.oneOf
         [ decodeMoveLeft
@@ -699,11 +700,20 @@ moveEventEncoder direction =
 
 mazeDrawnEventEncoder : MazeBackend -> Json.Encode.Value
 mazeDrawnEventEncoder mazeBackend =
+    let
+        positionEncoder =
+            \position ->
+                Json.Encode.object
+                    [ ( "row", Json.Encode.float position.row )
+                    , ( "column", Json.Encode.float position.column )
+                    ]
+    in
     Json.Encode.object
         [ ( "name", Json.Encode.string "MazeDrawn" )
         , ( "data"
           , Json.Encode.object
                 [ ( "creatorName", Json.Encode.string mazeBackend.creatorName )
+                , ( "playerPosition", positionEncoder mazeBackend.playerPosition )
                 , ( "walls"
                   , Json.Encode.list
                         (\wall ->
@@ -724,16 +734,7 @@ mazeDrawnEventEncoder mazeBackend =
                         )
                         mazeBackend.walls
                   )
-                , ( "golds"
-                  , Json.Encode.list
-                        (\gold ->
-                            Json.Encode.object
-                                [ ( "row", Json.Encode.float gold.row )
-                                , ( "column", Json.Encode.float gold.column )
-                                ]
-                        )
-                        mazeBackend.golds
-                  )
+                , ( "golds", Json.Encode.list positionEncoder mazeBackend.golds )
                 ]
           )
         ]
@@ -813,6 +814,7 @@ mouseProcessorForStageInteractions stage =
                 >> createGold
                 >> deleteGold
                 >> deleteWall
+                >> dragPlayer
                 >> createWallsFromFinishedDrawing
 
         WaitingForOtherMazeToBeDrawnStage ->
@@ -1423,6 +1425,54 @@ updateWallOpacity deltaTime wall =
     { wall | opacity = opacity }
 
 
+dragPlayer : Model -> Model
+dragPlayer model =
+    let
+        mousePosition =
+            model.mouse.position |> positionFromCoordinate
+    in
+    if model.draggingPlayer then
+        case model.mouse.buttonDown of
+            LeftMouseButton ->
+                { model | drawing = [], snappedDrawingPoints = [] }
+
+            _ ->
+                let
+                    snappedPlayerPosition =
+                        findNearestGridCenter mousePosition
+                in
+                { model | draggingPlayer = False }
+                    |> updateActiveMaze
+                        (\maze ->
+                            { maze
+                                | position = snappedPlayerPosition
+                                , golds = List.filter (\gold -> gold /= snappedPlayerPosition) maze.golds
+                            }
+                        )
+
+    else if List.length model.drawing > 1 then
+        model
+
+    else
+        case model.mouse.buttonDown of
+            LeftMouseButton ->
+                let
+                    playerPosition =
+                        model.mazes.active.position
+                in
+                if
+                    numberBetween (playerPosition.column - 0.3) (playerPosition.column + 0.3) mousePosition.column
+                        && numberBetween (playerPosition.row - 0.4) (playerPosition.row + 0.4) mousePosition.row
+                then
+                    { model | draggingPlayer = True, drawing = [], snappedDrawingPoints = [] }
+
+                else
+                    model
+
+            _ ->
+                model
+
+
 updateDrawing : Model -> Model
 updateDrawing model =
     -- The drawing is required for detecting taps/swipes, so we need to update the drawing at all times, except when all input should be disabled
@@ -1637,8 +1687,8 @@ distanceBetweenPoints pointA pointB =
 
 findNearestGridCenter : Position -> Position
 findNearestGridCenter position =
-    { row = position.row |> roundFloat
-    , column = position.column |> roundFloat
+    { row = min (gridSize.rowCount - 1) (max 0 position.row |> roundFloat)
+    , column = min (gridSize.columnCount - 1) (max 0 position.column |> roundFloat)
     }
 
 
@@ -1663,8 +1713,11 @@ createGold model =
 
             mousePosition =
                 model.mouse.position |> positionFromCoordinate
+
+            notPlacingAtPlayer =
+                nearestGridCenter /= model.mazes.active.position
         in
-        if withinBoard nearestGridCenter then
+        if withinBoard nearestGridCenter && notPlacingAtPlayer then
             let
                 golds =
                     List.concat [ [ nearestGridCenter ], model.mazes.active.golds ]
@@ -1816,7 +1869,8 @@ completeMazeDrawing model =
                             [ model.eventsQueuedForSubmission
                             , [ { event =
                                     MazeDrawn
-                                        { creatorName = activeMaze.creatorName
+                                        { playerPosition = activeMaze.position
+                                        , creatorName = activeMaze.creatorName
                                         , walls = activeMaze.walls |> backendWallsFromWalls
                                         , golds = activeMaze.golds
                                         }
@@ -2194,6 +2248,9 @@ viewMazesWithRotation model =
 
                 NotSwitchingMaze ->
                     []
+
+        mazes =
+            (model |> movePlayerToMouseIfDragging).mazes
     in
     div
         [ class "viewMazesWithRotation"
@@ -2215,13 +2272,26 @@ viewMazesWithRotation model =
             [ class "activeMaze"
             , css [ Css.property "backface-visibility" "hidden", Css.position Css.relative ]
             ]
-            (viewGrid model.mazes.active)
+            (viewGrid mazes.active)
         , div
             [ class "inactiveMaze"
             , css [ Css.transforms [ Css.rotateY (Css.deg 180) ], Css.position Css.relative ]
             ]
-            (viewGrid model.mazes.inactive)
+            (viewGrid mazes.inactive)
         ]
+
+
+movePlayerToMouseIfDragging : Model -> Model
+movePlayerToMouseIfDragging model =
+    model
+        |> updateActiveMaze
+            (\maze ->
+                if model.draggingPlayer then
+                    { maze | position = model.mouse.position |> positionFromCoordinate }
+
+                else
+                    maze
+            )
 
 
 viewGrid : Maze -> List (Html.Styled.Html Msg)
