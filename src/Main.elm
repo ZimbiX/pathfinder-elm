@@ -2310,8 +2310,8 @@ viewBackground =
         [ class "viewBackground"
         , css
             [ width (pct 100)
-            , height (px 1400)
-            , Css.position absolute
+            , height (pct 100)
+            , Css.position Css.fixed
             , Css.top (px 0)
             , Css.left (px 0)
             , Css.zIndex (Css.int -9999)
