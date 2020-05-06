@@ -67,6 +67,7 @@ $ ./scripts/build
 - Fix move events not syncing properly somehow (need to work out how to reproduce)
 - Prevent creating gold when clicking to dismiss the 'maze not possible' popup
 - Allow Enter to dismiss the 'maze not possible' popup
+- Record IP addresses
 - Prompt for player names
 - When clicking 'New game', bring along the opponent via an event through the backend containing the new game id - the id being generated way in advance so the link is in sync
 - Generate UUID to identify the user, and store in local storage - only when missing
