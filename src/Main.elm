@@ -1204,10 +1204,10 @@ dismissPopup model =
                         newModel
 
                     PlayingStage ->
-                        newModel |> startSwitchingMazesIfOtherMazeNotWon
+                        newModel
 
                     FirstWinStage ->
-                        newModel
+                        newModel |> startSwitchingMazesIfOtherMazeNotWon
            )
 
 

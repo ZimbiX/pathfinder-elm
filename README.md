@@ -64,6 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
+- Fix move events not syncing properly somehow (need to work out how to reproduce)
 - Prevent creating gold when clicking to dismiss the 'maze not possible' popup
 - Allow Enter to dismiss the 'maze not possible' popup
 - Prompt for player names
