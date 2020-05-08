@@ -1516,12 +1516,17 @@ dragPlayer model =
 updateDrawing : Model -> Model
 updateDrawing model =
     -- The drawing is required for detecting taps/swipes, so we need to update the drawing at all times, except when all input should be disabled
-    case model.switchingMaze of
-        SwitchingMaze _ ->
+    case model.popup of
+        Just _ ->
             model |> clearDrawing
 
-        NotSwitchingMaze ->
-            model |> addMousePositionToDrawingIfMouseDown
+        Nothing ->
+            case model.switchingMaze of
+                SwitchingMaze _ ->
+                    model |> clearDrawing
+
+                NotSwitchingMaze ->
+                    model |> addMousePositionToDrawingIfMouseDown
 
 
 addMousePositionToDrawingIfMouseDown : Model -> Model
