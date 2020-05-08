@@ -861,7 +861,7 @@ updatePlayerPosition deltaTime model =
         Just currentMove ->
             let
                 moveDistance =
-                    settings.playerMoveSpeed * deltaTime
+                    min 1 (settings.playerMoveSpeed * deltaTime)
 
                 column =
                     case currentMove.direction of
