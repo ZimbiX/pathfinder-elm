@@ -2259,9 +2259,14 @@ viewBoard model =
         viewDrawingStage =
             case model.mazes.active.stage of
                 DrawingStage ->
-                    [ lazy viewDrawing model.drawing
-                    , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
-                    ]
+                    case model.popup of
+                        Just _ ->
+                            []
+
+                        Nothing ->
+                            [ lazy viewDrawing model.drawing
+                            , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
+                            ]
 
                 WaitingForOtherMazeToBeDrawnStage ->
                     []
