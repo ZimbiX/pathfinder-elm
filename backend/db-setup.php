@@ -11,6 +11,7 @@ if (isset($_GET["reset"])) {
       event TEXT NOT NULL,
       version INT NOT NULL,
       at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      ip_info TEXT NOT NULL,
       PRIMARY KEY(id, version)
     )";
   if (!mysqli_query($con,$command)) {
