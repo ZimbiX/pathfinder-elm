@@ -94,6 +94,7 @@ type alias Model =
     , url : Url.Url
     , currentSeed : Seed
     , gameId : String
+    , enterHandled : Bool
     }
 
 
@@ -249,6 +250,7 @@ init ( seed, seedExtension ) url navKey =
     , url = url
     , currentSeed = initialSeed seed seedExtension
     , gameId = ""
+    , enterHandled = False
     }
         |> assignGameId url
         |> startEventPolling
@@ -364,6 +366,7 @@ update msg model =
                         |> dismissPopupIfEnterPressed rawKey
                         |> completeMazeDrawingIfEnterPressed rawKey
                         |> switchMazeIfMPressed rawKey
+                        |> clearEnterHandled
                         |> submitQueuedEvents
 
         Tick deltaTime ->
@@ -1169,27 +1172,49 @@ revealWallIfAtPoint point wall =
 
 completeMazeDrawingIfEnterPressed : RawKey -> Model -> Model
 completeMazeDrawingIfEnterPressed rawKey model =
-    case Keyboard.anyKeyUpper rawKey of
-        Just Enter ->
-            model |> completeMazeDrawing
+    if model.enterHandled == False then
+        case Keyboard.anyKeyUpper rawKey of
+            Just Enter ->
+                model
+                    |> completeMazeDrawing
+                    |> markEnterHandled
 
-        _ ->
-            model
+            _ ->
+                model
+
+    else
+        model
 
 
 dismissPopupIfEnterPressed : RawKey -> Model -> Model
 dismissPopupIfEnterPressed rawKey model =
-    case Keyboard.anyKeyUpper rawKey of
-        Just Enter ->
-            case model.popup of
-                Just _ ->
-                    model |> dismissPopup
+    if model.enterHandled == False then
+        case Keyboard.anyKeyUpper rawKey of
+            Just Enter ->
+                case model.popup of
+                    Just _ ->
+                        model
+                            |> dismissPopup
+                            |> markEnterHandled
 
-                Nothing ->
-                    model
+                    Nothing ->
+                        model
 
-        _ ->
-            model
+            _ ->
+                model
+
+    else
+        model
+
+
+markEnterHandled : Model -> Model
+markEnterHandled model =
+    { model | enterHandled = True }
+
+
+clearEnterHandled : Model -> Model
+clearEnterHandled model =
+    { model | enterHandled = False }
 
 
 dismissPopup : Model -> Model
