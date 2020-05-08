@@ -1762,7 +1762,7 @@ createGold model =
             notPlacingAtPlayer =
                 nearestGridCenter /= model.mazes.active.position
         in
-        if withinBoard nearestGridCenter && notPlacingAtPlayer then
+        if withinBoard mousePosition && withinBoard nearestGridCenter && notPlacingAtPlayer then
             let
                 golds =
                     List.concat [ [ nearestGridCenter ], model.mazes.active.golds ]
