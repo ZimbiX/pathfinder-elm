@@ -1318,12 +1318,16 @@ dismissPopup model =
 
 switchMazeIfMPressed : RawKey -> Model -> Model
 switchMazeIfMPressed rawKey model =
-    case Keyboard.anyKeyUpper rawKey of
-        Just (Character "M") ->
-            model |> startSwitchingMazes
+    if model.popup == NoPopup then
+        case Keyboard.anyKeyUpper rawKey of
+            Just (Character "M") ->
+                model |> startSwitchingMazes
 
-        _ ->
-            model
+            _ ->
+                model
+
+    else
+        model
 
 
 startSwitchingMazesIfOtherMazeNotWon : Model -> Model
