@@ -469,14 +469,7 @@ update msg model =
 
 
 promptForMazeCreatorNameIfUnnamed : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
-promptForMazeCreatorNameIfUnnamed modelAndCmd =
-    let
-        model =
-            Tuple.first modelAndCmd
-
-        cmd =
-            Tuple.second modelAndCmd
-    in
+promptForMazeCreatorNameIfUnnamed ( model, cmd ) =
     (case model.mazes.active.stage of
         DrawingStage ->
             case model.mazes.active.creatorName of
