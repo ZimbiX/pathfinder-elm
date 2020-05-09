@@ -2004,7 +2004,7 @@ completeMazeDrawing model =
                               ]
                             ]
             in
-            { model | eventsQueuedForSubmission = eventsQueuedForSubmission, popup = NoPopup }
+            { model | eventsQueuedForSubmission = eventsQueuedForSubmission }
                 |> updateActiveMaze
                     (\maze ->
                         { maze
@@ -2123,6 +2123,26 @@ endGameIfWon model =
 
         inactiveMaze =
             model.mazes.inactive
+
+        playerIsSittingOnGold =
+            (activeMaze.currentMove == Nothing)
+                && (activeMaze.golds |> List.any (\gold -> gold == activeMaze.position))
+
+        revealMazeAndMarkWon =
+            updateActiveMaze
+                (\maze ->
+                    { maze
+                        | walls = activeMaze.walls |> revealAllWalls
+                        , stage = FirstWinStage
+                    }
+                )
+
+        showWinPopupIfNotStillReplayingEvents newModel =
+            if List.isEmpty newModel.queuedEventsForApplication then
+                { newModel | popup = winPopup }
+
+            else
+                newModel |> dismissPopup
     in
     case model.mazes.active.stage of
         DrawingStage ->
@@ -2132,18 +2152,10 @@ endGameIfWon model =
             model
 
         PlayingStage ->
-            if
-                (activeMaze.currentMove == Nothing)
-                    && (activeMaze.golds |> List.any (\gold -> gold == activeMaze.position))
-            then
-                { model | popup = winPopup }
-                    |> updateActiveMaze
-                        (\maze ->
-                            { maze
-                                | walls = activeMaze.walls |> revealAllWalls
-                                , stage = FirstWinStage
-                            }
-                        )
+            if playerIsSittingOnGold then
+                model
+                    |> revealMazeAndMarkWon
+                    |> showWinPopupIfNotStillReplayingEvents
 
             else
                 model
