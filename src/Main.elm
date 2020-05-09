@@ -95,6 +95,7 @@ type alias Model =
     , url : Url.Url
     , currentSeed : Seed
     , gameId : String
+    , nextGameId : String
     , enterHandled : Bool
     , loadedInitialEvents : Bool
     }
@@ -263,9 +264,11 @@ init ( seed, seedExtension ) url navKey =
     , url = url
     , currentSeed = initialSeed seed seedExtension
     , gameId = ""
+    , nextGameId = ""
     , enterHandled = False
     , loadedInitialEvents = False
     }
+        |> generateNextGameId
         |> assignGameId url
         |> startEventPolling
         |> promptForMazeCreatorNameIfUnnamed
@@ -325,6 +328,18 @@ generateGameId model =
     in
     { model
         | gameId = newUuid |> Uuid.toString |> Debug.log "Game ID"
+        , currentSeed = newSeed
+    }
+
+
+generateNextGameId : Model -> Model
+generateNextGameId model =
+    let
+        ( newUuid, newSeed ) =
+            step Uuid.generator model.currentSeed
+    in
+    { model
+        | nextGameId = newUuid |> Uuid.toString |> Debug.log "Next game ID"
         , currentSeed = newSeed
     }
 
@@ -2310,6 +2325,7 @@ view model =
                     (model.mazes.inactive.creatorName |> mazeCreatorNameToString)
                     stage
                     inactiveStage
+                    model.nextGameId
 
             else
                 div [ class "viewInstructions_none" ] []
@@ -2319,7 +2335,7 @@ view model =
             , viewBackground
             , lazy viewBoard model
             , lazy3 viewButtons stage isSwitching isShowingPopup
-            , viewNewGameLink
+            , newGameLink model.nextGameId [ text "New game" ]
             , viewGithubLink
             ]
 
@@ -3018,8 +3034,8 @@ viewPopupRequestingPlayerName popupMessage creatorName =
         ]
 
 
-viewInstructions : String -> String -> Stage -> Stage -> Html.Styled.Html Msg
-viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage inactiveStage =
+viewInstructions : String -> String -> Stage -> Stage -> String -> Html.Styled.Html Msg
+viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage inactiveStage nextGameId =
     div [ class "viewInstructions", css [ Css.float Css.left ] ]
         [ case stage of
             DrawingStage ->
@@ -3053,13 +3069,13 @@ viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage inactiveSta
                     )
 
             FirstWinStage ->
-                newGameLink [ text "Play again!" ]
+                newGameLink nextGameId [ text "Play again!" ]
         ]
 
 
-newGameLink : List (Html.Styled.Html Msg) -> Html.Styled.Html Msg
-newGameLink children =
-    a [ href "#", onClick PlayAgain ] children
+newGameLink : String -> List (Html.Styled.Html Msg) -> Html.Styled.Html Msg
+newGameLink nextGameId children =
+    a [ href ("#gameId=" ++ nextGameId), onClick PlayAgain ] children
 
 
 viewButtons : Stage -> Bool -> Bool -> Html.Styled.Html Msg
@@ -3143,10 +3159,6 @@ viewDoneButton disabled =
         , Html.Styled.Attributes.disabled disabled
         ]
         [ text "Done" ]
-
-
-viewNewGameLink =
-    newGameLink [ text "New game" ]
 
 
 viewGithubLink =
