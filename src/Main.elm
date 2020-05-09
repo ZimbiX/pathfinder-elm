@@ -96,6 +96,7 @@ type alias Model =
     , currentSeed : Seed
     , gameId : String
     , enterHandled : Bool
+    , loadedInitialEvents : Bool
     }
 
 
@@ -263,6 +264,7 @@ init ( seed, seedExtension ) url navKey =
     , currentSeed = initialSeed seed seedExtension
     , gameId = ""
     , enterHandled = False
+    , loadedInitialEvents = False
     }
         |> assignGameId url
         |> startEventPolling
@@ -637,7 +639,7 @@ queueNewEventsForApplication events model =
             List.concat [ model.queuedEventsForApplication, events ]
                 |> List.sortBy (\event -> event.version)
     in
-    case List.Extra.last events of
+    (case List.Extra.last events of
         Just latestEvent ->
             ( { model
                 | gameStateVersion =
@@ -654,6 +656,8 @@ queueNewEventsForApplication events model =
               --, Cmd.none
             , Process.sleep 1000 |> Task.perform (\_ -> RequestNewEventsFromBackend)
             )
+    )
+        |> Tuple.mapFirst (\newModel -> { newModel | loadedInitialEvents = True })
 
 
 requestNewEvents : String -> Int -> Cmd Msg
@@ -2290,6 +2294,9 @@ view model =
         stage =
             model.mazes.active.stage
 
+        inactiveStage =
+            model.mazes.inactive.stage
+
         isSwitching =
             model.switchingMaze /= NotSwitchingMaze
 
@@ -2302,9 +2309,32 @@ view model =
                     (model.mazes.active.creatorName |> mazeCreatorNameToString)
                     (model.mazes.inactive.creatorName |> mazeCreatorNameToString)
                     stage
+                    inactiveStage
 
             else
                 div [ class "viewInstructions_none" ] []
+
+        gameContent =
+            [ instructions
+            , viewBackground
+            , lazy viewBoard model
+            , lazy3 viewButtons stage isSwitching isShowingPopup
+            , viewNewGameLink
+            , viewGithubLink
+            ]
+
+        loadingContent =
+            [ div [] [ text "Reticulating splines..." ]
+            , viewBackground
+            , viewGithubLink
+            ]
+
+        content =
+            if model.loadedInitialEvents then
+                gameContent
+
+            else
+                loadingContent
     in
     { title = "PathFinder"
     , body =
@@ -2317,13 +2347,7 @@ view model =
                 , Css.height (Css.pct 100)
                 ]
             ]
-            [ instructions
-            , viewBackground
-            , lazy viewBoard model
-            , lazy3 viewButtons stage isSwitching isShowingPopup
-            , viewNewGameLink
-            , viewGithubLink
-            ]
+            content
             |> toUnstyled
         ]
     }
@@ -2994,8 +3018,8 @@ viewPopupRequestingPlayerName popupMessage creatorName =
         ]
 
 
-viewInstructions : String -> String -> Stage -> Html.Styled.Html Msg
-viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage =
+viewInstructions : String -> String -> Stage -> Stage -> Html.Styled.Html Msg
+viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage inactiveStage =
     div [ class "viewInstructions", css [ Css.float Css.left ] ]
         [ case stage of
             DrawingStage ->
@@ -3006,7 +3030,27 @@ viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage =
                 text ""
 
             PlayingStage ->
-                text (inactiveMazeCreatorName ++ ", it's your turn!")
+                let
+                    turnMsg =
+                        inactiveMazeCreatorName ++ ", it's your turn!"
+
+                    finishItMsg =
+                        inactiveMazeCreatorName ++ ", finish it off!"
+                in
+                text
+                    (case inactiveStage of
+                        DrawingStage ->
+                            turnMsg
+
+                        WaitingForOtherMazeToBeDrawnStage ->
+                            turnMsg
+
+                        PlayingStage ->
+                            turnMsg
+
+                        FirstWinStage ->
+                            finishItMsg
+                    )
 
             FirstWinStage ->
                 newGameLink [ text "Play again!" ]
