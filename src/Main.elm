@@ -3,6 +3,7 @@ module Main exposing (Model, Msg(..), init, main, update, view)
 import AStar
 import Basics.Extra exposing (fractionalModBy)
 import Browser
+import Browser.Dom
 import Browser.Events exposing (onAnimationFrameDelta)
 import Browser.Navigation as Nav
 import Css exposing (absolute, backgroundColor, border3, height, hex, left, opacity, pct, px, rad, rotate, solid, top, transform, width)
@@ -15,7 +16,7 @@ import Html.Styled exposing (a, button, div, img, text, toUnstyled)
 import Html.Styled.Attributes exposing (class, css, draggable, href, src)
 import Html.Styled.Events exposing (on, onClick)
 import Html.Styled.Keyed as Keyed
-import Html.Styled.Lazy exposing (lazy, lazy2)
+import Html.Styled.Lazy exposing (lazy, lazy2, lazy3)
 import Http
 import Json.Decode
 import Json.Encode
@@ -85,7 +86,7 @@ type alias Model =
     , drawing : Drawing
     , snappedDrawingPoints : SnappedDrawingPoints
     , draggingPlayer : Bool
-    , popup : Maybe Popup
+    , popup : Popup
     , switchingMaze : SwitchingMazeState
     , gameStateVersion : Int
     , queuedEventsForApplication : List VersionedBackendEvent
@@ -105,7 +106,7 @@ type alias Mazes =
 
 
 type alias Maze =
-    { creatorName : String
+    { creatorName : CreatorName
     , position : Position
     , currentMove : CurrentMove
     , walls : Walls
@@ -113,6 +114,11 @@ type alias Maze =
     , stage : Stage
     , pathTravelled : PathTravelled
     }
+
+
+type CreatorName
+    = PlaceholderCreatorName String
+    | ProvidedCreatorName String
 
 
 type alias Walls =
@@ -197,7 +203,13 @@ type Stage
     | FirstWinStage
 
 
-type alias Popup =
+type Popup
+    = InfoPopup PopupMessage
+    | InputPopup PopupMessage
+    | NoPopup
+
+
+type alias PopupMessage =
     { messageLines : List String }
 
 
@@ -241,7 +253,7 @@ init ( seed, seedExtension ) url navKey =
     , drawing = []
     , snappedDrawingPoints = []
     , draggingPlayer = False
-    , popup = Nothing
+    , popup = NoPopup
     , switchingMaze = NotSwitchingMaze
     , gameStateVersion = 0
     , queuedEventsForApplication = []
@@ -254,10 +266,11 @@ init ( seed, seedExtension ) url navKey =
     }
         |> assignGameId url
         |> startEventPolling
+        |> promptForMazeCreatorNameIfUnnamed
 
 
 initialMaze creatorName =
-    { creatorName = creatorName
+    { creatorName = PlaceholderCreatorName creatorName
     , position = { column = 0, row = 0 }
     , currentMove = Nothing
     , walls = []
@@ -329,6 +342,8 @@ type Msg
     | MoveButtonPressed MoveDirection
     | KeyDown RawKey
     | MouseUpdated Mouse
+    | FocusResult (Result Browser.Dom.Error ())
+    | MazeCreatorNameChanged String
     | DoneButtonPressed
     | DismissPopup
     | RequestNewEventsFromBackend
@@ -381,6 +396,7 @@ update msg model =
                 |> swapMazesIfFinishedSwitching
             , Cmd.none
             )
+                |> promptForMazeCreatorNameIfUnnamed
 
         MouseUpdated unscaledMouse ->
             model
@@ -389,6 +405,15 @@ update msg model =
                 |> mouseProcessorForStageInteractions model.mazes.active.stage
                 |> clearDrawingIfFinished
                 |> submitQueuedEvents
+
+        FocusResult _ ->
+            ( model, Cmd.none )
+
+        MazeCreatorNameChanged name ->
+            ( model
+                |> updateMazeCreatorName name
+            , Cmd.none
+            )
 
         DoneButtonPressed ->
             model
@@ -441,6 +466,67 @@ update msg model =
 
         PlayAgain ->
             ( model, Cmd.batch [ Nav.pushUrl model.navKey "/", Nav.reload ] )
+
+
+promptForMazeCreatorNameIfUnnamed : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+promptForMazeCreatorNameIfUnnamed modelAndCmd =
+    let
+        model =
+            Tuple.first modelAndCmd
+
+        cmd =
+            Tuple.second modelAndCmd
+    in
+    (case model.mazes.active.stage of
+        DrawingStage ->
+            case model.mazes.active.creatorName of
+                PlaceholderCreatorName _ ->
+                    model |> promptForMazeCreatorName
+
+                ProvidedCreatorName _ ->
+                    ( model, Cmd.none )
+
+        WaitingForOtherMazeToBeDrawnStage ->
+            ( model, Cmd.none )
+
+        PlayingStage ->
+            ( model, Cmd.none )
+
+        FirstWinStage ->
+            ( model, Cmd.none )
+    )
+        |> Tuple.mapSecond (\c -> Cmd.batch [ cmd, c ])
+
+
+promptForMazeCreatorName : Model -> ( Model, Cmd Msg )
+promptForMazeCreatorName model =
+    ( { model
+        | popup =
+            InputPopup
+                { messageLines =
+                    [ (model.mazes.active.creatorName |> mazeCreatorNameToString)
+                        ++ ", what is your name?"
+                    ]
+                }
+      }
+    , Browser.Dom.focus "mazeCreatorNameInput"
+        |> Task.attempt FocusResult
+    )
+
+
+updateMazeCreatorName : String -> Model -> Model
+updateMazeCreatorName name model =
+    model |> updateActiveMaze (\maze -> { maze | creatorName = ProvidedCreatorName name })
+
+
+mazeCreatorNameToString : CreatorName -> String
+mazeCreatorNameToString creatorName =
+    case creatorName of
+        PlaceholderCreatorName name ->
+            name
+
+        ProvidedCreatorName name ->
+            name
 
 
 updateActiveMaze : (Maze -> Maze) -> Model -> Model
@@ -501,6 +587,7 @@ applyNextEventFromServerIfReady model =
                                 (\maze ->
                                     { maze
                                         | position = mazeBackend.playerPosition
+                                        , creatorName = ProvidedCreatorName mazeBackend.creatorName
                                         , golds = mazeBackend.golds
                                         , walls = mazeBackend.walls |> wallsFromBackendWalls
                                     }
@@ -1192,13 +1279,13 @@ dismissPopupIfEnterPressed rawKey model =
         case Keyboard.anyKeyUpper rawKey of
             Just Enter ->
                 case model.popup of
-                    Just _ ->
+                    NoPopup ->
+                        model
+
+                    _ ->
                         model
                             |> dismissPopup
                             |> markEnterHandled
-
-                    Nothing ->
-                        model
 
             _ ->
                 model
@@ -1219,7 +1306,7 @@ clearEnterHandled model =
 
 dismissPopup : Model -> Model
 dismissPopup model =
-    { model | popup = Nothing }
+    { model | popup = NoPopup }
         |> (\newModel ->
                 case model.mazes.active.stage of
                     DrawingStage ->
@@ -1517,16 +1604,16 @@ updateDrawing : Model -> Model
 updateDrawing model =
     -- The drawing is required for detecting taps/swipes, so we need to update the drawing at all times, except when all input should be disabled
     case model.popup of
-        Just _ ->
-            model |> clearDrawing
-
-        Nothing ->
+        NoPopup ->
             case model.switchingMaze of
                 SwitchingMaze _ ->
                     model |> clearDrawing
 
                 NotSwitchingMaze ->
                     model |> addMousePositionToDrawingIfMouseDown
+
+        _ ->
+            model |> clearDrawing
 
 
 addMousePositionToDrawingIfMouseDown : Model -> Model
@@ -1915,7 +2002,7 @@ completeMazeDrawing model =
                             , [ { event =
                                     MazeDrawn
                                         { playerPosition = activeMaze.position
-                                        , creatorName = activeMaze.creatorName
+                                        , creatorName = activeMaze.creatorName |> mazeCreatorNameToString
                                         , walls = activeMaze.walls |> backendWallsFromWalls
                                         , golds = activeMaze.golds
                                         }
@@ -1924,7 +2011,7 @@ completeMazeDrawing model =
                               ]
                             ]
             in
-            { model | eventsQueuedForSubmission = eventsQueuedForSubmission }
+            { model | eventsQueuedForSubmission = eventsQueuedForSubmission, popup = NoPopup }
                 |> updateActiveMaze
                     (\maze ->
                         { maze
@@ -1959,7 +2046,7 @@ completeMazeDrawing model =
                 complete
 
             else
-                { model | popup = Just { messageLines = [ "Maze is not possible to win!" ] } }
+                { model | popup = InfoPopup { messageLines = [ "Maze is not possible to win!" ] } }
 
         WaitingForOtherMazeToBeDrawnStage ->
             -- Impossible to get to?
@@ -1987,7 +2074,6 @@ mazeIsPossibleToWin maze =
                 getBranchPositions
                 (gold |> toPositionTuple)
                 (maze.position |> toPositionTuple)
-                |> Debug.log "found path"
 
         getBranchPositions ( column, row ) =
             [ ( column + 1, row )
@@ -2037,7 +2123,7 @@ endGameIfWon model =
                     cameSecondMessage
 
         winPopup =
-            Just { messageLines = [ message ] }
+            InfoPopup { messageLines = [ message ] }
 
         activeMaze =
             model.mazes.active
@@ -2171,6 +2257,19 @@ view model =
 
         isSwitching =
             model.switchingMaze /= NotSwitchingMaze
+
+        isShowingPopup =
+            model.popup /= NoPopup
+
+        instructions =
+            if shouldShowAnyPopupAndInstructions model then
+                viewInstructions
+                    (model.mazes.active.creatorName |> mazeCreatorNameToString)
+                    (model.mazes.inactive.creatorName |> mazeCreatorNameToString)
+                    stage
+
+            else
+                div [ class "viewInstructions_none" ] []
     in
     { title = "PathFinder"
     , body =
@@ -2183,14 +2282,10 @@ view model =
                 , Css.height (Css.pct 100)
                 ]
             ]
-            [ viewInstructions
-                model.mazes.active.creatorName
-                model.mazes.inactive.creatorName
-                stage
-                isSwitching
+            [ instructions
             , viewBackground
             , lazy viewBoard model
-            , lazy2 viewButtons stage isSwitching
+            , lazy3 viewButtons stage isSwitching isShowingPopup
             , viewNewGameLink
             , viewGithubLink
             ]
@@ -2253,6 +2348,18 @@ roundFloat =
     round >> toFloat
 
 
+shouldShowAnyPopupAndInstructions : Model -> Bool
+shouldShowAnyPopupAndInstructions model =
+    let
+        noEventsQueuedForApplication =
+            List.isEmpty model.queuedEventsForApplication
+
+        notSwitchingMaze =
+            model.switchingMaze == NotSwitchingMaze
+    in
+    noEventsQueuedForApplication && notSwitchingMaze
+
+
 viewBoard : Model -> Html.Styled.Html Msg
 viewBoard model =
     let
@@ -2260,13 +2367,13 @@ viewBoard model =
             case model.mazes.active.stage of
                 DrawingStage ->
                     case model.popup of
-                        Just _ ->
-                            []
-
-                        Nothing ->
+                        NoPopup ->
                             [ lazy viewDrawing model.drawing
                             , lazy viewSnappedDrawingPoints model.snappedDrawingPoints
                             ]
+
+                        _ ->
+                            []
 
                 WaitingForOtherMazeToBeDrawnStage ->
                     []
@@ -2278,10 +2385,22 @@ viewBoard model =
                     []
 
         mouseEvents =
-            [ updateMouseOn "pointerdown"
-            , updateMouseOn "pointerup"
-            , updateMouseOn "pointermove"
-            ]
+            case model.popup of
+                NoPopup ->
+                    [ updateMouseOn "pointerdown"
+                    , updateMouseOn "pointerup"
+                    , updateMouseOn "pointermove"
+                    ]
+
+                _ ->
+                    []
+
+        popup =
+            if shouldShowAnyPopupAndInstructions model then
+                viewPopup model.popup model.mazes.active.creatorName
+
+            else
+                div [ class "viewPopup_none" ] []
     in
     div
         (List.concat
@@ -2318,7 +2437,7 @@ viewBoard model =
                         ]
                   ]
                 , viewDrawingStage
-                , [ viewPopup model.popup ]
+                , [ popup ]
                 ]
             )
         ]
@@ -2724,7 +2843,21 @@ viewSnappedDrawingPoint snappedDrawingPoint =
         []
 
 
-viewPopup maybePopup =
+viewPopup : Popup -> CreatorName -> Html.Styled.Html Msg
+viewPopup popup creatorName =
+    case popup of
+        InfoPopup popupMessage ->
+            viewPopupShowingInfo popupMessage
+
+        InputPopup popupMessage ->
+            viewPopupRequestingPlayerName popupMessage creatorName
+
+        NoPopup ->
+            div [ class "viewPopup_none" ] []
+
+
+viewPopupShowingInfo : PopupMessage -> Html.Styled.Html Msg
+viewPopupShowingInfo popupMessage =
     let
         w =
             300
@@ -2735,54 +2868,104 @@ viewPopup maybePopup =
         border =
             2
     in
-    case maybePopup of
-        Just popup ->
-            div
-                [ class "viewPopup"
-                , css
-                    [ Css.position absolute
-                    , width (px w)
-                    , height (px h)
-                    , top (px ((gridSize.cellHeight * gridSize.rowCount * 0.95) / 2 - h / 2))
-                    , left (px (((gridSize.cellWidth * gridSize.columnCount) / 2 - w / 2) - border))
-                    , backgroundColor (hex "#01b5b5")
-                    , Css.border3 (px border) Css.solid (hex "#000")
-                    , Css.textAlign Css.center
-                    , Css.displayFlex
-                    , Css.flexDirection Css.column
-                    , Css.justifyContent Css.center
-                    , Css.boxShadow4 (px 0) (px 0) (px 39) (hex "#000")
-                    , Css.opacity (Css.num 0.8)
-                    ]
+    div
+        [ class "viewPopupShowingInfo"
+        , css
+            [ Css.position absolute
+            , width (px w)
+            , height (px h)
+            , top (px ((gridSize.cellHeight * gridSize.rowCount * 0.95) / 2 - h / 2))
+            , left (px (((gridSize.cellWidth * gridSize.columnCount) / 2 - w / 2) - border))
+            , backgroundColor (hex "#01b5b5")
+            , Css.border3 (px border) Css.solid (hex "#000")
+            , Css.textAlign Css.center
+            , Css.displayFlex
+            , Css.flexDirection Css.column
+            , Css.justifyContent Css.center
+            , Css.boxShadow4 (px 0) (px 0) (px 39) (hex "#000")
+            , Css.opacity (Css.num 0.8)
+            ]
+        ]
+        [ div [] (popupMessage.messageLines |> List.map (\messageLine -> div [] [ text messageLine ]))
+        , viewPopupDismissButton "Close"
+        ]
+
+
+viewPopupRequestingPlayerName : PopupMessage -> CreatorName -> Html.Styled.Html Msg
+viewPopupRequestingPlayerName popupMessage creatorName =
+    let
+        w =
+            300
+
+        h =
+            160
+
+        border =
+            2
+
+        inputValue =
+            case creatorName of
+                PlaceholderCreatorName name ->
+                    ""
+
+                ProvidedCreatorName name ->
+                    name
+    in
+    div
+        [ class "viewPopupRequestingPlayerName"
+        , css
+            [ Css.position absolute
+            , width (px w)
+            , height (px h)
+            , top (px ((gridSize.cellHeight * gridSize.rowCount * 0.95) / 2 - h / 2))
+            , left (px (((gridSize.cellWidth * gridSize.columnCount) / 2 - w / 2) - border))
+            , backgroundColor (hex "#01b5b5")
+            , Css.border3 (px border) Css.solid (hex "#000")
+            , Css.textAlign Css.center
+            , Css.displayFlex
+            , Css.flexDirection Css.column
+            , Css.justifyContent Css.center
+            , Css.boxShadow4 (px 0) (px 0) (px 39) (hex "#000")
+            , Css.opacity (Css.num 0.8)
+            ]
+        ]
+        [ div [] (popupMessage.messageLines |> List.map (\messageLine -> div [] [ text messageLine ]))
+        , Html.Styled.input
+            [ Html.Styled.Attributes.type_ "text"
+            , Html.Styled.Attributes.id "mazeCreatorNameInput"
+            , Html.Styled.Attributes.value inputValue
+            , Html.Styled.Attributes.placeholder "Enter your name"
+            , Html.Styled.Events.onInput MazeCreatorNameChanged
+            , css
+                [ Css.textAlign Css.center
+                , Css.margin4 (px 10) (px 10) (px 0) (px 10)
+                , Css.backgroundColor (hex "#fff8")
+                , Css.border3 (px 2) Css.solid (hex "#fff")
+                , Css.fontSize Css.inherit
+                , Css.lineHeight (Css.rem 1.8)
                 ]
-                [ div [] (popup.messageLines |> List.map (\messageLine -> div [] [ text messageLine ]))
-                , viewPopupDismissButton "Close"
-                ]
-
-        Nothing ->
-            div [ class "viewPopup_nothing" ] []
+            ]
+            []
+        , viewPopupDismissButton "Submit"
+        ]
 
 
-viewInstructions : String -> String -> Stage -> Bool -> Html.Styled.Html Msg
-viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage isSwitching =
+viewInstructions : String -> String -> Stage -> Html.Styled.Html Msg
+viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage =
     div [ class "viewInstructions", css [ Css.float Css.left ] ]
-        [ if isSwitching then
-            text ""
+        [ case stage of
+            DrawingStage ->
+                text (inactiveMazeCreatorName ++ " please look away. " ++ activeMazeCreatorName ++ " can now draw the level that " ++ inactiveMazeCreatorName ++ " will later play.")
 
-          else
-            case stage of
-                DrawingStage ->
-                    text (inactiveMazeCreatorName ++ " please look away. " ++ activeMazeCreatorName ++ " can now draw the level that " ++ inactiveMazeCreatorName ++ " will later play.")
+            WaitingForOtherMazeToBeDrawnStage ->
+                --This should not happen
+                text ""
 
-                WaitingForOtherMazeToBeDrawnStage ->
-                    --This should not happen
-                    text ""
+            PlayingStage ->
+                text (inactiveMazeCreatorName ++ ", it's your turn!")
 
-                PlayingStage ->
-                    text (inactiveMazeCreatorName ++ ", it's your turn!")
-
-                FirstWinStage ->
-                    newGameLink [ text "Play again!" ]
+            FirstWinStage ->
+                newGameLink [ text "Play again!" ]
         ]
 
 
@@ -2791,13 +2974,13 @@ newGameLink children =
     a [ href "#", onClick PlayAgain ] children
 
 
-viewButtons : Stage -> Bool -> Html.Styled.Html Msg
-viewButtons stage isSwitchingMaze =
+viewButtons : Stage -> Bool -> Bool -> Html.Styled.Html Msg
+viewButtons stage isSwitchingMaze isShowingPopup =
     case stage of
         DrawingStage ->
             div [ class "viewButtons" ]
                 [ div [ css [ Css.displayFlex ] ]
-                    [ viewDoneButton
+                    [ viewDoneButton isShowingPopup
                     ]
                 , div [] [ text "Draw walls with your mouse/finger." ]
                 , div [] [ text "Drag player to reposition." ]
@@ -2859,7 +3042,8 @@ viewArrowButton moveDirection buttonText =
         [ text buttonText ]
 
 
-viewDoneButton =
+viewDoneButton : Bool -> Html.Styled.Html Msg
+viewDoneButton disabled =
     button
         [ css
             [ width (px 160)
@@ -2868,6 +3052,7 @@ viewDoneButton =
             , fontFamily
             ]
         , onClick DoneButtonPressed
+        , Html.Styled.Attributes.disabled disabled
         ]
         [ text "Done" ]
 
