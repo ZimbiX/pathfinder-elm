@@ -64,6 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
+- Fix replaying not doing win popup/switch
 - Fix in Firefox
 - Prevent drawing slowly making it possible to draw outside the grid
 - Show nothing while first loading events from backend

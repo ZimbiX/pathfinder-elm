@@ -2478,6 +2478,7 @@ viewMazesWithRotation model =
                   , Css.touchAction Css.none
                   , Css.transformStyle Css.preserve3d
                   , Css.transforms [ Css.rotateY (Css.deg flipDegrees) ]
+                  , Css.property "user-select" "none"
 
                   --, Css.border3 (px 1) Css.solid (hex "#f00")
                   ]
@@ -2856,6 +2857,34 @@ viewPopup popup creatorName =
             div [ class "viewPopup_none" ] []
 
 
+popupCss =
+    let
+        w =
+            300
+
+        h =
+            160
+
+        border =
+            2
+    in
+    css
+        [ Css.position absolute
+        , width (px w)
+        , height (px h)
+        , top (px ((gridSize.cellHeight * gridSize.rowCount * 0.95) / 2 - h / 2))
+        , left (px (((gridSize.cellWidth * gridSize.columnCount) / 2 - w / 2) - border))
+        , backgroundColor (hex "#01b5b5")
+        , Css.border3 (px border) Css.solid (hex "#000")
+        , Css.textAlign Css.center
+        , Css.displayFlex
+        , Css.flexDirection Css.column
+        , Css.justifyContent Css.center
+        , Css.boxShadow4 (px 0) (px 0) (px 39) (hex "#000")
+        , Css.opacity (Css.num 0.8)
+        ]
+
+
 viewPopupShowingInfo : PopupMessage -> Html.Styled.Html Msg
 viewPopupShowingInfo popupMessage =
     let
@@ -2870,21 +2899,7 @@ viewPopupShowingInfo popupMessage =
     in
     div
         [ class "viewPopupShowingInfo"
-        , css
-            [ Css.position absolute
-            , width (px w)
-            , height (px h)
-            , top (px ((gridSize.cellHeight * gridSize.rowCount * 0.95) / 2 - h / 2))
-            , left (px (((gridSize.cellWidth * gridSize.columnCount) / 2 - w / 2) - border))
-            , backgroundColor (hex "#01b5b5")
-            , Css.border3 (px border) Css.solid (hex "#000")
-            , Css.textAlign Css.center
-            , Css.displayFlex
-            , Css.flexDirection Css.column
-            , Css.justifyContent Css.center
-            , Css.boxShadow4 (px 0) (px 0) (px 39) (hex "#000")
-            , Css.opacity (Css.num 0.8)
-            ]
+        , popupCss
         ]
         [ div [] (popupMessage.messageLines |> List.map (\messageLine -> div [] [ text messageLine ]))
         , viewPopupDismissButton "Close"
@@ -2894,15 +2909,6 @@ viewPopupShowingInfo popupMessage =
 viewPopupRequestingPlayerName : PopupMessage -> CreatorName -> Html.Styled.Html Msg
 viewPopupRequestingPlayerName popupMessage creatorName =
     let
-        w =
-            300
-
-        h =
-            160
-
-        border =
-            2
-
         inputValue =
             case creatorName of
                 PlaceholderCreatorName name ->
@@ -2913,21 +2919,7 @@ viewPopupRequestingPlayerName popupMessage creatorName =
     in
     div
         [ class "viewPopupRequestingPlayerName"
-        , css
-            [ Css.position absolute
-            , width (px w)
-            , height (px h)
-            , top (px ((gridSize.cellHeight * gridSize.rowCount * 0.95) / 2 - h / 2))
-            , left (px (((gridSize.cellWidth * gridSize.columnCount) / 2 - w / 2) - border))
-            , backgroundColor (hex "#01b5b5")
-            , Css.border3 (px border) Css.solid (hex "#000")
-            , Css.textAlign Css.center
-            , Css.displayFlex
-            , Css.flexDirection Css.column
-            , Css.justifyContent Css.center
-            , Css.boxShadow4 (px 0) (px 0) (px 39) (hex "#000")
-            , Css.opacity (Css.num 0.8)
-            ]
+        , popupCss
         ]
         [ div [] (popupMessage.messageLines |> List.map (\messageLine -> div [] [ text messageLine ]))
         , Html.Styled.input
