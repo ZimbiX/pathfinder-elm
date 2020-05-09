@@ -64,7 +64,6 @@ $ ./scripts/build
 
 ### Todo
 
-- Fix in Firefox
 - Prevent M switching maze when there is a popup
 - Prevent drawing slowly making it possible to draw outside the grid
 - Show nothing while first loading events from backend

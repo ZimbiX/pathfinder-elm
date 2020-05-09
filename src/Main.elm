@@ -2432,7 +2432,8 @@ viewBoard model =
                             []
                         ]
                         [ div
-                            [ css
+                            [ class "viewBoard flip-scene"
+                            , css
                                 [ Css.property "perspective" "1000px"
                                 , width (zoomPx (gridSize.cellWidth * gridSize.columnCount))
                                 , height (zoomPx (gridSize.cellHeight * gridSize.rowCount))
@@ -2451,7 +2452,7 @@ viewBoard model =
 viewMazesWithRotation : Model -> Html.Styled.Html Msg
 viewMazesWithRotation model =
     let
-        flipDegrees =
+        flipTargetDegrees =
             case model.switchingMaze of
                 SwitchingMaze progressFraction ->
                     if progressFraction >= 0 then
@@ -2475,28 +2476,43 @@ viewMazesWithRotation model =
             (model |> movePlayerToMouseIfDragging).mazes
     in
     div
-        [ class "viewMazesWithRotation"
+        [ class "viewMazesWithRotation flip-card"
         , css
             (List.concat
                 [ [ width (zoomPx (gridSize.cellWidth * gridSize.columnCount))
                   , height (zoomPx (gridSize.cellHeight * gridSize.rowCount))
-                  , Css.touchAction Css.none
+                  , Css.position Css.relative
                   , Css.transformStyle Css.preserve3d
-                  , Css.transforms [ Css.rotateY (Css.deg flipDegrees) ]
+                  , Css.touchAction Css.none
                   , Css.property "user-select" "none"
+                  , Css.boxShadow4 (zoomPx 0) (zoomPx 0) (zoomPx 10) (hex "#000")
+                  , Css.transforms [ Css.rotateY (Css.deg flipTargetDegrees) ]
                   ]
                 , flipAnimateCss
                 ]
             )
         ]
+        -- Frustratingly, with 'backface-visibility: hidden', Chrome won't update the contents of the reverse side until *after* it's finished flipping back! Adding 'transform-style: preserve-3d' makes the contents update correctly, but results in a weird tearing effect when the flipping finishes.
         [ div
-            [ class "activeMaze"
-            , css [ Css.property "backface-visibility" "hidden", Css.position Css.relative ]
+            [ class "activeMaze flip-face"
+            , css
+                [ Css.position Css.absolute
+                , Css.width (Css.pct 100)
+                , Css.height (Css.pct 100)
+                , Css.property "-moz-backface-visibility" "hidden"
+                , Css.transforms [ Css.rotateY (Css.deg 0) ]
+                ]
             ]
             (viewGrid mazes.active)
         , div
-            [ class "inactiveMaze"
-            , css [ Css.transforms [ Css.rotateY (Css.deg 180) ], Css.position Css.relative ]
+            [ class "inactiveMaze flip-face"
+            , css
+                [ Css.position Css.absolute
+                , Css.width (Css.pct 100)
+                , Css.height (Css.pct 100)
+                , Css.property "-moz-backface-visibility" "hidden"
+                , Css.transforms [ Css.rotateY (Css.deg 180) ]
+                ]
             ]
             (viewGrid mazes.inactive)
         ]
@@ -2567,7 +2583,6 @@ viewBoardCells =
             , height (zoomPx (gridSize.cellHeight * gridSize.rowCount))
             , left (zoomPx 0)
             , top (zoomPx 0)
-            , Css.boxShadow4 (zoomPx 0) (zoomPx 0) (zoomPx 10) (hex "#000")
             ]
         ]
         (List.concatMap
@@ -2939,6 +2954,7 @@ viewPopupRequestingPlayerName popupMessage creatorName =
                     (zoomPx 10)
                 , Css.backgroundColor (hex "#fff8")
                 , Css.border3 (zoomPx 2) Css.solid (hex "#fff")
+                , Css.fontFamily Css.inherit
                 , Css.fontSize Css.inherit
                 , Css.lineHeight (Css.rem (zoom 1.8))
                 ]
