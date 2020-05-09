@@ -2411,19 +2411,19 @@ viewBoard model =
         (List.concat
             [ [ class "viewBoard"
               , css
-                    [ Css.property "zoom" ((settings.boardZoom * 100 |> String.fromFloat) ++ "%")
-                    , width (px (gridSize.cellWidth * gridSize.columnCount + gridBorder.left * 2))
-                    , height (px (gridSize.cellHeight * gridSize.rowCount + gridBorder.top * 2))
+                    [ width (zoomPx (gridSize.cellWidth * gridSize.columnCount + gridBorder.left * 2))
+                    , height (zoomPx (gridSize.cellHeight * gridSize.rowCount + gridBorder.top * 2))
                     ]
               ]
             , mouseEvents
             ]
         )
         [ div
-            [ css
+            [ class "viewBoard inner"
+            , css
                 [ Css.position absolute
-                , left (px gridBorder.left)
-                , top (px gridBorder.top)
+                , left (zoomPx gridBorder.left)
+                , top (zoomPx gridBorder.top)
                 ]
             ]
             (List.concat
@@ -2434,8 +2434,8 @@ viewBoard model =
                         [ div
                             [ css
                                 [ Css.property "perspective" "1000px"
-                                , width (px (gridSize.cellWidth * gridSize.columnCount))
-                                , height (px (gridSize.cellHeight * gridSize.rowCount))
+                                , width (zoomPx (gridSize.cellWidth * gridSize.columnCount))
+                                , height (zoomPx (gridSize.cellHeight * gridSize.rowCount))
                                 ]
                             ]
                             [ viewMazesWithRotation model ]
@@ -2478,14 +2478,12 @@ viewMazesWithRotation model =
         [ class "viewMazesWithRotation"
         , css
             (List.concat
-                [ [ width (px (gridSize.cellWidth * gridSize.columnCount))
-                  , height (px (gridSize.cellHeight * gridSize.rowCount))
+                [ [ width (zoomPx (gridSize.cellWidth * gridSize.columnCount))
+                  , height (zoomPx (gridSize.cellHeight * gridSize.rowCount))
                   , Css.touchAction Css.none
                   , Css.transformStyle Css.preserve3d
                   , Css.transforms [ Css.rotateY (Css.deg flipDegrees) ]
                   , Css.property "user-select" "none"
-
-                  --, Css.border3 (px 1) Css.solid (hex "#f00")
                   ]
                 , flipAnimateCss
                 ]
@@ -2535,8 +2533,8 @@ viewBackground =
             [ width (pct 100)
             , height (pct 100)
             , Css.position Css.fixed
-            , Css.top (px 0)
-            , Css.left (px 0)
+            , Css.top (zoomPx 0)
+            , Css.left (zoomPx 0)
             , Css.zIndex (Css.int -9999)
             , Css.backgroundImage
                 (Css.linearGradient2
@@ -2565,11 +2563,11 @@ viewBoardCells =
     div
         [ css
             [ Css.position absolute
-            , width (px (gridSize.cellWidth * gridSize.columnCount))
-            , height (px (gridSize.cellHeight * gridSize.rowCount))
-            , left (px 0)
-            , top (px 0)
-            , Css.boxShadow4 (px 0) (px 0) (px 10) (hex "#000")
+            , width (zoomPx (gridSize.cellWidth * gridSize.columnCount))
+            , height (zoomPx (gridSize.cellHeight * gridSize.rowCount))
+            , left (zoomPx 0)
+            , top (zoomPx 0)
+            , Css.boxShadow4 (zoomPx 0) (zoomPx 0) (zoomPx 10) (hex "#000")
             ]
         ]
         (List.concatMap
@@ -2589,10 +2587,10 @@ viewBoardCell position =
         [ src "/assets/images/grid_cell_hd.png"
         , css
             [ Css.position absolute
-            , width (px gridSize.cellWidth)
-            , height (px gridSize.cellHeight)
-            , left (px (gridSize.cellWidth * position.column))
-            , top (px (gridSize.cellHeight * position.row))
+            , width (zoomPx gridSize.cellWidth)
+            , height (zoomPx gridSize.cellHeight)
+            , left (zoomPx (gridSize.cellWidth * position.column))
+            , top (zoomPx (gridSize.cellHeight * position.row))
             ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
@@ -2639,10 +2637,10 @@ viewPathTravelledSquare position =
     div
         [ css
             [ Css.position absolute
-            , width (px (gridSize.cellWidth - gapLeft))
-            , height (px (gridSize.cellHeight - gapTop))
-            , left (px (gridSize.cellWidth * position.column + gapLeft / 2))
-            , top (px (gridSize.cellHeight * position.row + gapTop / 2))
+            , width (zoomPx (gridSize.cellWidth - gapLeft))
+            , height (zoomPx (gridSize.cellHeight - gapTop))
+            , left (zoomPx (gridSize.cellWidth * position.column + gapLeft / 2))
+            , top (zoomPx (gridSize.cellHeight * position.row + gapTop / 2))
             , Css.backgroundColor (hex "#79be7e")
             ]
         , draggable "false"
@@ -2666,10 +2664,10 @@ viewPlayer position =
         [ src "/assets/images/player_hd.png"
         , css
             [ Css.position absolute
-            , width (px 11)
-            , height (px 31)
-            , left (px ((position.column |> xFromColumn) - (11 / 2) |> roundFloat))
-            , top (px ((position.row |> yFromRow) - 31 / 2 + 1 |> roundFloat))
+            , width (zoomPx 11)
+            , height (zoomPx 31)
+            , left (zoomPx ((position.column |> xFromColumn) - (11 / 2) |> roundFloat))
+            , top (zoomPx ((position.row |> yFromRow) - 31 / 2 + 1 |> roundFloat))
             ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
@@ -2686,10 +2684,10 @@ viewGold gold =
         [ src "/assets/images/golden_hd.png"
         , css
             [ Css.position absolute
-            , width (px 17)
-            , height (px 17)
-            , left (px ((gold.column |> xFromColumn) - (17 / 2) |> roundFloat))
-            , top (px ((gold.row |> yFromRow) - 17 / 2 |> roundFloat))
+            , width (zoomPx 17)
+            , height (zoomPx 17)
+            , left (zoomPx ((gold.column |> xFromColumn) - (17 / 2) |> roundFloat))
+            , top (zoomPx ((gold.row |> yFromRow) - 17 / 2 |> roundFloat))
             ]
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
@@ -2707,10 +2705,10 @@ viewWall wall =
             [ src "/assets/images/wall_h_hd.png"
             , css
                 [ Css.position absolute
-                , height (px 8)
-                , width (px 32)
-                , left (px ((wall.column |> xFromColumn) - 16 |> roundFloat))
-                , top (px ((wall.row |> yFromRow) - 4 |> roundFloat))
+                , height (zoomPx 8)
+                , width (zoomPx 32)
+                , left (zoomPx ((wall.column |> xFromColumn) - 16 |> roundFloat))
+                , top (zoomPx ((wall.row |> yFromRow) - 4 |> roundFloat))
                 , opacity (Css.num wall.opacity)
                 , transform (rotate (Css.deg 90))
                 ]
@@ -2724,10 +2722,10 @@ viewWall wall =
             [ src "/assets/images/wall_h_hd.png"
             , css
                 [ Css.position absolute
-                , width (px 32)
-                , height (px 8)
-                , left (px ((wall.column |> xFromColumn) - 16 |> roundFloat))
-                , top (px ((wall.row |> yFromRow) - 4 |> roundFloat))
+                , width (zoomPx 32)
+                , height (zoomPx 8)
+                , left (zoomPx ((wall.column |> xFromColumn) - 16 |> roundFloat))
+                , top (zoomPx ((wall.row |> yFromRow) - 4 |> roundFloat))
                 , opacity (Css.num wall.opacity)
                 ]
             , draggable "false"
@@ -2816,14 +2814,14 @@ viewDrawingSegment coordA coordB =
     div
         [ css
             [ Css.position absolute
-            , left (px (l - 2))
-            , top (px (t - 2))
-            , width (px h)
-            , height (px 0)
+            , left (zoomPx (l - 2))
+            , top (zoomPx (t - 2))
+            , width (zoomPx h)
+            , height (zoomPx 0)
             , backgroundColor (hex "#000")
             , transform (rotate (rad angle))
-            , border3 (px 2) Css.solid (hex "#000")
-            , Css.borderRadius (px 4)
+            , border3 (zoomPx 2) Css.solid (hex "#000")
+            , Css.borderRadius (zoomPx 4)
             ]
         ]
         []
@@ -2837,10 +2835,10 @@ viewSnappedDrawingPoint snappedDrawingPoint =
     div
         [ css
             [ Css.position absolute
-            , width (px 4)
-            , height (px 4)
-            , left (px ((snappedDrawingPoint.column |> xFromColumn) - (4 / 2) |> roundFloat))
-            , top (px ((snappedDrawingPoint.row |> yFromRow) - (4 / 2) |> roundFloat))
+            , width (zoomPx 4)
+            , height (zoomPx 4)
+            , left (zoomPx ((snappedDrawingPoint.column |> xFromColumn) - (4 / 2) |> roundFloat))
+            , top (zoomPx ((snappedDrawingPoint.row |> yFromRow) - (4 / 2) |> roundFloat))
             , backgroundColor (hex "#c00")
             ]
         , draggable "false"
@@ -2875,33 +2873,32 @@ popupCss =
     in
     css
         [ Css.position absolute
-        , width (px w)
-        , height (px h)
-        , top (px ((gridSize.cellHeight * gridSize.rowCount * 0.95) / 2 - h / 2))
-        , left (px (((gridSize.cellWidth * gridSize.columnCount) / 2 - w / 2) - border))
+        , width (zoomPx w)
+        , height (zoomPx h)
+        , top (zoomPx ((gridSize.cellHeight * gridSize.rowCount * 0.95) / 2 - h / 2))
+        , left (zoomPx (((gridSize.cellWidth * gridSize.columnCount) / 2 - w / 2) - border))
+        , Css.fontSize (Css.em (zoom 1))
         , backgroundColor (hex "#01b5b5")
-        , Css.border3 (px border) Css.solid (hex "#000")
+        , Css.border3 (zoomPx border) Css.solid (hex "#000")
         , Css.textAlign Css.center
         , Css.displayFlex
         , Css.flexDirection Css.column
         , Css.justifyContent Css.center
-        , Css.boxShadow4 (px 0) (px 0) (px 39) (hex "#000")
+        , Css.boxShadow4 (zoomPx 0) (zoomPx 0) (zoomPx 39) (hex "#000")
         , Css.opacity (Css.num 0.8)
         ]
 
 
+zoom num =
+    num * settings.boardZoom
+
+
+zoomPx num =
+    num |> zoom |> px
+
+
 viewPopupShowingInfo : PopupMessage -> Html.Styled.Html Msg
 viewPopupShowingInfo popupMessage =
-    let
-        w =
-            300
-
-        h =
-            160
-
-        border =
-            2
-    in
     div
         [ class "viewPopupShowingInfo"
         , popupCss
@@ -2935,11 +2932,15 @@ viewPopupRequestingPlayerName popupMessage creatorName =
             , Html.Styled.Events.onInput MazeCreatorNameChanged
             , css
                 [ Css.textAlign Css.center
-                , Css.margin4 (px 10) (px 10) (px 0) (px 10)
+                , Css.margin4
+                    (zoomPx 10)
+                    (zoomPx 10)
+                    (zoomPx 0)
+                    (zoomPx 10)
                 , Css.backgroundColor (hex "#fff8")
-                , Css.border3 (px 2) Css.solid (hex "#fff")
+                , Css.border3 (zoomPx 2) Css.solid (hex "#fff")
                 , Css.fontSize Css.inherit
-                , Css.lineHeight (Css.rem 1.8)
+                , Css.lineHeight (Css.rem (zoom 1.8))
                 ]
             ]
             []
@@ -3013,11 +3014,11 @@ viewPopupDismissButton : String -> Html.Styled.Html Msg
 viewPopupDismissButton buttonText =
     button
         [ css
-            [ width (px 120)
-            , height (px 50)
-            , Css.margin2 (px 0) Css.auto
-            , Css.marginTop (px 15)
-            , Css.fontSize (px 30)
+            [ width (zoomPx 120)
+            , height (zoomPx 50)
+            , Css.margin2 (zoomPx 0) Css.auto
+            , Css.marginTop (zoomPx 15)
+            , Css.fontSize (zoomPx 30)
             , fontFamily
             ]
         , onClick DismissPopup
