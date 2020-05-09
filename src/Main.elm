@@ -91,6 +91,8 @@ type alias Model =
     , gameStateVersion : Int
     , queuedEventsForApplication : List VersionedBackendEvent
     , eventsQueuedForSubmission : List VersionedBackendEvent
+    , numEventsSubmitted : Int
+    , numEventsSubmittedSuccessfully : Int
     , navKey : Nav.Key
     , url : Url.Url
     , currentSeed : Seed
@@ -98,6 +100,7 @@ type alias Model =
     , nextGameId : String
     , enterHandled : Bool
     , loadedInitialEvents : Bool
+    , startingNewGame : Bool
     }
 
 
@@ -234,6 +237,7 @@ type BackendEvent
     | MoveRightBackendEvent
     | MoveUpBackendEvent
     | MoveDownBackendEvent
+    | NewGameBackendEvent String
 
 
 type alias VersionedBackendEvent =
@@ -260,6 +264,8 @@ init ( seed, seedExtension ) url navKey =
     , gameStateVersion = 0
     , queuedEventsForApplication = []
     , eventsQueuedForSubmission = []
+    , numEventsSubmitted = 0
+    , numEventsSubmittedSuccessfully = 0
     , navKey = navKey
     , url = url
     , currentSeed = initialSeed seed seedExtension
@@ -267,6 +273,7 @@ init ( seed, seedExtension ) url navKey =
     , nextGameId = ""
     , enterHandled = False
     , loadedInitialEvents = False
+    , startingNewGame = False
     }
         |> generateNextGameId
         |> assignGameId url
@@ -368,7 +375,8 @@ type Msg
     | SentEventToBackend (Result Http.Error String)
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
-    | PlayAgain
+    | PlayAgainClicked
+    | PlayAgain String
 
 
 type MoveDirection
@@ -402,17 +410,20 @@ update msg model =
                         |> submitQueuedEvents
 
         Tick deltaTime ->
-            ( model
+            model
                 |> applyNextEventFromServerIfReady
-                |> updatePlayerPosition deltaTime
-                |> returnToOriginIfPathUnclear
-                |> finishPlayerMove
-                |> endGameIfWon
-                |> updateWallsOpacity deltaTime
-                |> keepSwitchingMazes deltaTime
-                |> swapMazesIfFinishedSwitching
-            , Cmd.none
-            )
+                |> (\( newModel, cmd ) ->
+                        ( newModel
+                            |> updatePlayerPosition deltaTime
+                            |> returnToOriginIfPathUnclear
+                            |> finishPlayerMove
+                            |> endGameIfWon
+                            |> updateWallsOpacity deltaTime
+                            |> keepSwitchingMazes deltaTime
+                            |> swapMazesIfFinishedSwitching
+                        , cmd
+                        )
+                   )
                 |> promptForMazeCreatorNameIfUnnamed
 
         MouseUpdated unscaledMouse ->
@@ -463,7 +474,10 @@ update msg model =
         SentEventToBackend result ->
             case result of
                 Ok submissionResponse ->
-                    submissionResponse |> Debug.log "Submitted event" |> (\_ -> ( model, Cmd.none ))
+                    submissionResponse
+                        |> Debug.log "Submitted event"
+                        |> (\_ -> { model | numEventsSubmittedSuccessfully = model.numEventsSubmittedSuccessfully + 1 })
+                        |> startNewGameIfRequestedAndAllEventsAreSubmittedSuccessfully
 
                 Err requestErr ->
                     requestErr |> Debug.log "Error submitting event" |> (\_ -> ( model, Cmd.none ))
@@ -478,11 +492,55 @@ update msg model =
 
         UrlChanged url ->
             ( { model | url = url |> Debug.log "New URL" }
-            , Cmd.none
+            , case url.fragment of
+                Just "noop" ->
+                    Cmd.none
+
+                _ ->
+                    Nav.reload
             )
 
-        PlayAgain ->
-            ( model, Cmd.batch [ Nav.pushUrl model.navKey "/", Nav.reload ] )
+        PlayAgainClicked ->
+            model
+                |> enqueueSubmissionOfNewGameEvent
+                |> submitQueuedEvents
+
+        PlayAgain nextGameId ->
+            model |> startNewGame nextGameId
+
+
+startNewGameIfRequestedAndAllEventsAreSubmittedSuccessfully : Model -> ( Model, Cmd Msg )
+startNewGameIfRequestedAndAllEventsAreSubmittedSuccessfully model =
+    if model.startingNewGame then
+        if model.numEventsSubmittedSuccessfully == model.numEventsSubmitted then
+            Debug.log "all events are submitted - starting new game" ""
+                |> (\_ -> model |> startNewGame model.nextGameId)
+
+        else
+            Debug.log "can't start new game yet - still waiting for some events to be submitted" (model.gameStateVersion - model.numEventsSubmittedSuccessfully)
+                |> (\_ -> ( model, Cmd.none ))
+
+    else
+        ( model, Cmd.none )
+
+
+startNewGame : String -> Model -> ( Model, Cmd Msg )
+startNewGame nextGameId model =
+    ( model, Nav.load ("/#gameId=" ++ nextGameId) )
+
+
+enqueueSubmissionOfNewGameEvent : Model -> Model
+enqueueSubmissionOfNewGameEvent model =
+    let
+        playAgainEvent =
+            { event = NewGameBackendEvent model.nextGameId
+            , version = model.gameStateVersion + List.length model.eventsQueuedForSubmission + 1
+            }
+    in
+    { model
+        | startingNewGame = True
+        , eventsQueuedForSubmission = List.concat [ [ playAgainEvent ], model.eventsQueuedForSubmission ]
+    }
 
 
 promptForMazeCreatorNameIfUnnamed : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
@@ -569,7 +627,7 @@ updateInactiveMaze mazeUpdater model =
     }
 
 
-applyNextEventFromServerIfReady : Model -> Model
+applyNextEventFromServerIfReady : Model -> ( Model, Cmd Msg )
 applyNextEventFromServerIfReady model =
     case List.Extra.uncons model.queuedEventsForApplication of
         Just ( firstEvent, laterEvents ) ->
@@ -587,12 +645,12 @@ applyNextEventFromServerIfReady model =
                     model.switchingMaze /= NotSwitchingMaze
             in
             if isSwitchingMaze then
-                model
+                ( model, Cmd.none )
 
             else
                 case firstEvent.event of
                     MazeDrawn mazeBackend ->
-                        model
+                        ( model
                             |> updateActiveMaze
                                 (\maze ->
                                     { maze
@@ -604,21 +662,26 @@ applyNextEventFromServerIfReady model =
                                 )
                             |> completeMazeDrawing
                             |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
+                        , Cmd.none
+                        )
 
                     MoveLeftBackendEvent ->
-                        moveIfReady MoveLeft
+                        ( moveIfReady MoveLeft, Cmd.none )
 
                     MoveRightBackendEvent ->
-                        moveIfReady MoveRight
+                        ( moveIfReady MoveRight, Cmd.none )
 
                     MoveUpBackendEvent ->
-                        moveIfReady MoveUp
+                        ( moveIfReady MoveUp, Cmd.none )
 
                     MoveDownBackendEvent ->
-                        moveIfReady MoveDown
+                        ( moveIfReady MoveDown, Cmd.none )
+
+                    NewGameBackendEvent nextGameId ->
+                        ( model, Process.sleep 0 |> Task.perform (\_ -> PlayAgain nextGameId) )
 
         Nothing ->
-            model
+            ( model, Cmd.none )
 
 
 wallsFromBackendWalls : List WallBackend -> List Wall
@@ -715,6 +778,17 @@ backendEventDecoder =
                     )
                 )
 
+        decodeNewGame =
+            exactMatch
+                (Json.Decode.field "name" Json.Decode.string)
+                "NewGame"
+                (Json.Decode.field "data"
+                    (Json.Decode.map
+                        NewGameBackendEvent
+                        (Json.Decode.field "nextGameId" Json.Decode.string)
+                    )
+                )
+
         positionDecoder =
             Json.Decode.map2
                 Position
@@ -734,6 +808,7 @@ backendEventDecoder =
         , decodeMoveUp
         , decodeMoveDown
         , decodeMazeDrawn
+        , decodeNewGame
         ]
 
 
@@ -844,6 +919,18 @@ mazeDrawnEventEncoder mazeBackend =
         ]
 
 
+newGameEventEncoder : String -> Json.Encode.Value
+newGameEventEncoder nextGameId =
+    Json.Encode.object
+        [ ( "name", Json.Encode.string "NewGame" )
+        , ( "data"
+          , Json.Encode.object
+                [ ( "nextGameId", Json.Encode.string nextGameId )
+                ]
+          )
+        ]
+
+
 formUrlencoded : List ( String, String ) -> String
 formUrlencoded object =
     object
@@ -876,6 +963,9 @@ submitEvent gameId versionedEvent =
                 MoveDownBackendEvent ->
                     moveEventEncoder MoveDown
 
+                NewGameBackendEvent nextGameId ->
+                    newGameEventEncoder nextGameId
+
         body =
             [ ( "id", gameId )
             , ( "version", String.fromInt versionedEvent.version )
@@ -905,6 +995,7 @@ submitQueuedEvents model =
     ( { model
         | gameStateVersion = newVersion
         , eventsQueuedForSubmission = []
+        , numEventsSubmitted = model.numEventsSubmitted + List.length versionedEvents
       }
     , Cmd.batch requests
     )
@@ -3075,7 +3166,7 @@ viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage inactiveSta
 
 newGameLink : String -> List (Html.Styled.Html Msg) -> Html.Styled.Html Msg
 newGameLink nextGameId children =
-    a [ href ("#gameId=" ++ nextGameId), onClick PlayAgain ] children
+    a [ href "#noop", onClick PlayAgainClicked ] children
 
 
 viewButtons : Stage -> Bool -> Bool -> Html.Styled.Html Msg

@@ -64,7 +64,9 @@ $ ./scripts/build
 
 ### Todo
 
-- When clicking 'New game', bring along the opponent via an event through the backend containing the new game id - the id being generated way in advance so the link is in sync - "Your opponent started a new game"
+- Fix bug where completing a game in one window makes the other get stuck with an invisible popup
+- Submit the next game ID in an initial event so the 'New game' links are in sync
+- Make new game event prompt "Your opponent started a new game" before redirecting
 - Generate UUID to identify the user, and store in local storage - only when missing
 - Resume as the right player upon a page reload
 - Allow two players to draw their maze simultaneously on each device
