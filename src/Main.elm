@@ -2013,6 +2013,7 @@ completeMazeDrawing model =
                             , pathTravelled = [ activeMaze.position ]
                         }
                     )
+                |> (\newModel -> { newModel | popup = NoPopup })
                 |> (\newModel ->
                         case newModel.mazes.inactive.stage of
                             DrawingStage ->
