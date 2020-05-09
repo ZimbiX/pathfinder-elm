@@ -64,7 +64,6 @@ $ ./scripts/build
 
 ### Todo
 
-- Prevent drawing slowly making it possible to draw outside the grid
 - Show nothing while first loading events from backend
 - When clicking 'New game', bring along the opponent via an event through the backend containing the new game id - the id being generated way in advance so the link is in sync - "Your opponent started a new game"
 - Generate UUID to identify the user, and store in local storage - only when missing

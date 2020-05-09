@@ -1619,10 +1619,18 @@ addMousePositionToDrawingIfMouseDown model =
         drawing =
             case model.mouse.buttonDown of
                 LeftMouseButton ->
-                    List.concat
-                        [ model.drawing
-                        , [ model.mouse.position ]
-                        ]
+                    let
+                        mousePosition =
+                            model.mouse.position |> positionFromCoordinate
+                    in
+                    if withinBoardOrBorder mousePosition then
+                        List.concat
+                            [ model.drawing
+                            , [ model.mouse.position ]
+                            ]
+
+                    else
+                        model.drawing
 
                 _ ->
                     model.drawing
@@ -1973,9 +1981,26 @@ positionsAxisRange axis positions =
 
 
 withinBoard : Position -> Bool
-withinBoard position =
-    numberBetween -0.5 (gridSize.rowCount - 0.5) position.row
-        && numberBetween -0.5 (gridSize.columnCount - 0.5) position.column
+withinBoard =
+    withinBoardWithTolerances 0 0
+
+
+withinBoardOrBorder : Position -> Bool
+withinBoardOrBorder =
+    let
+        rowTolerance =
+            gridBorder.top / gridSize.cellHeight
+
+        columnTolerance =
+            gridBorder.left / gridSize.cellWidth
+    in
+    withinBoardWithTolerances rowTolerance columnTolerance
+
+
+withinBoardWithTolerances : Float -> Float -> Position -> Bool
+withinBoardWithTolerances rowTolerance columnTolerance position =
+    numberBetween (-0.5 - rowTolerance) (gridSize.rowCount - 0.5 + rowTolerance) position.row
+        && numberBetween (-0.5 - columnTolerance) (gridSize.columnCount - 0.5 + columnTolerance) position.column
 
 
 completeMazeDrawing : Model -> Model
