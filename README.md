@@ -64,6 +64,7 @@ $ ./scripts/build
 
 ### Todo
 
+- Handle HTTP 409 Conflict when submitting an event
 - Prevent lag causing a bounce off the edge of the maze one square too early
 - Fix sync bug - need to work out how to reproduce - if still present after having rearchitected tracking current state version
 - Fix bug where completing a game in one window makes the other get stuck with an invisible popup

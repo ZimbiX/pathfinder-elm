@@ -41,6 +41,7 @@ import Url.Parser.Query
 settings =
     { playerMoveSpeed = 0.007
     , wallOpacitySpeed = 0.008
+    , animateBackground = False
     , boardZoom = 2
     , mazeSwitching =
         { delaySeconds = 0.2
@@ -2459,6 +2460,7 @@ view model =
             [ instructions
             , viewBackground
             , viewUnsyncedEventsIndicator model.numEventsSubmitted model.numEventsSubmittedSuccessfully
+            , viewReplayProgressIndicator model.gameStateVersion (List.length model.queuedEventsForApplication)
             , lazy viewBoard model
             , lazy3 viewButtons stage isSwitching isShowingPopup
             , newGameLink model.nextGameId [ text "New game" ]
@@ -2742,28 +2744,36 @@ viewBackground =
     div
         [ class "viewBackground"
         , css
-            [ width (pct 100)
-            , height (pct 100)
-            , Css.position Css.fixed
-            , Css.top (zoomPx 0)
-            , Css.left (zoomPx 0)
-            , Css.zIndex (Css.int -9999)
-            , Css.backgroundImage
-                (Css.linearGradient2
-                    (Css.deg 37)
-                    (Css.stop2 (hex "287fc4") (Css.pct 0))
-                    (Css.stop2 (hex "6dff66") (Css.pct 100))
-                    []
-                )
-            , Css.animationName
-                (Css.Animations.keyframes
-                    [ ( 0, [ Css.Animations.custom "filter" "hue-rotate(0)" ] )
-                    , ( 100, [ Css.Animations.custom "filter" "hue-rotate(360deg)" ] )
+            (List.concat
+                [ [ width (pct 100)
+                  , height (pct 100)
+                  , Css.position Css.fixed
+                  , Css.top (zoomPx 0)
+                  , Css.left (zoomPx 0)
+                  , Css.zIndex (Css.int -9999)
+                  , Css.backgroundImage
+                        (Css.linearGradient2
+                            (Css.deg 37)
+                            (Css.stop2 (hex "287fc4") (Css.pct 0))
+                            (Css.stop2 (hex "6dff66") (Css.pct 100))
+                            []
+                        )
+                  ]
+                , if settings.animateBackground then
+                    [ Css.animationName
+                        (Css.Animations.keyframes
+                            [ ( 0, [ Css.Animations.custom "filter" "hue-rotate(0)" ] )
+                            , ( 100, [ Css.Animations.custom "filter" "hue-rotate(360deg)" ] )
+                            ]
+                        )
+                    , Css.animationDuration (Css.sec 40)
+                    , Css.property "animation-iteration-count" "infinite"
                     ]
-                )
-            , Css.animationDuration (Css.sec 40)
-            , Css.property "animation-iteration-count" "infinite"
-            ]
+
+                  else
+                    []
+                ]
+            )
         , draggable "false"
         , onContextMenuPreventDefault (Tick 0)
         ]
@@ -3277,6 +3287,43 @@ viewLoadingSpinner children =
               ]
             ]
         )
+
+
+viewReplayProgressIndicator : Int -> Int -> Html.Styled.Html Msg
+viewReplayProgressIndicator gameStateVersion queuedEventsForApplication =
+    let
+        fullWidth =
+            gridSize.columnCount * gridSize.cellWidth
+
+        currentWidth =
+            fullWidth * progressFraction
+
+        progressFraction =
+            toFloat gameStateVersion / toFloat (gameStateVersion + queuedEventsForApplication)
+
+        progressCss =
+            css
+                [ Css.position Css.absolute
+                , Css.top (zoomPx (gridBorder.top - 10))
+                , Css.left (zoomPx gridBorder.left)
+                , Css.width (zoomPx currentWidth)
+                , Css.borderBottom3 (zoomPx 1) Css.solid (Css.hex "#fff")
+                ]
+
+        progressCssIfProgressing =
+            if progressFraction < 1 then
+                [ progressCss ]
+
+            else
+                []
+    in
+    div
+        (List.concat
+            [ [ class "viewReplayProgressIndicator" ]
+            , progressCssIfProgressing
+            ]
+        )
+        []
 
 
 newGameLink : String -> List (Html.Styled.Html Msg) -> Html.Styled.Html Msg
