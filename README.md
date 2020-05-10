@@ -64,6 +64,9 @@ $ ./scripts/build
 
 ### Todo
 
+- When applying events, ignore any that are below the current gamestate version
+- Prevent lag causing a bounce off the edge of the maze one square too early
+- Fix sync bug - need to work out how to reproduce
 - Fix bug where completing a game in one window makes the other get stuck with an invisible popup
 - Submit the next game ID in an initial event so the 'New game' links are in sync
 - Make new game event prompt "Your opponent started a new game" before redirecting

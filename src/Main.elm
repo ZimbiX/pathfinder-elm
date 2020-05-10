@@ -2424,6 +2424,7 @@ view model =
         gameContent =
             [ instructions
             , viewBackground
+            , viewUnsyncedEventsIndicator model.numEventsSubmitted model.numEventsSubmittedSuccessfully
             , lazy viewBoard model
             , lazy3 viewButtons stage isSwitching isShowingPopup
             , newGameLink model.nextGameId [ text "New game" ]
@@ -3162,6 +3163,86 @@ viewInstructions activeMazeCreatorName inactiveMazeCreatorName stage inactiveSta
             FirstWinStage ->
                 newGameLink nextGameId [ text "Play again!" ]
         ]
+
+
+viewUnsyncedEventsIndicator : Int -> Int -> Html.Styled.Html Msg
+viewUnsyncedEventsIndicator numEventsSubmitted numEventsSubmittedSuccessfully =
+    div
+        [ class "viewUnsyncedEventsIndicator"
+        , Html.Styled.Attributes.title "Some events are still being sent"
+        ]
+        (if numEventsSubmitted > numEventsSubmittedSuccessfully then
+            let
+                numUnsyncedEvents =
+                    numEventsSubmitted - numEventsSubmittedSuccessfully |> String.fromInt
+            in
+            [ div
+                [ css
+                    [ Css.position Css.absolute
+                    , Css.top (zoomPx 41)
+                    , Css.left (zoomPx 7)
+                    ]
+                ]
+                [ viewLoadingSpinner [ text numUnsyncedEvents ] ]
+            ]
+
+         else
+            []
+        )
+
+
+viewLoadingSpinner : List (Html.Styled.Html Msg) -> Html.Styled.Html Msg
+viewLoadingSpinner children =
+    let
+        size =
+            16
+    in
+    div
+        []
+        (List.concat
+            [ [ div
+                    [ css
+                        [ Css.display Css.inlineBlock
+                        , Css.width (zoomPx size)
+                        , Css.height (zoomPx size)
+                        , Css.after
+                            [ Css.display Css.block
+                            , Css.boxSizing Css.borderBox
+                            , Css.width (zoomPx size)
+                            , Css.height (zoomPx size)
+                            , Css.property "content" "' '"
+                            , Css.borderRadius (Css.pct 50)
+                            , Css.border3 (zoomPx 1) Css.solid (Css.hex "#fff")
+                            , Css.borderColor4 (Css.hex "#fff") Css.transparent (Css.hex "#fff") Css.transparent
+                            , Css.animationName
+                                (Css.Animations.keyframes
+                                    [ ( 0, [ Css.Animations.custom "transform" "rotate(0deg)" ] )
+                                    , ( 100, [ Css.Animations.custom "transform" "rotate(360deg)" ] )
+                                    ]
+                                )
+                            , Css.animationDuration (Css.sec 2)
+                            , Css.property "animation-iteration-count" "infinite"
+                            , Css.property "animation-timing-function" "linear"
+                            ]
+                        ]
+                    ]
+                    []
+              ]
+            , [ div
+                    [ css
+                        [ Css.position Css.absolute
+                        , Css.top (zoomPx 0)
+                        , Css.width (zoomPx size)
+                        , Css.lineHeight (zoomPx size)
+                        , Css.fontSize (zoomPx (size * 0.625))
+                        , Css.textAlign Css.center
+                        , Css.color (Css.hex "#fff")
+                        ]
+                    ]
+                    children
+              ]
+            ]
+        )
 
 
 newGameLink : String -> List (Html.Styled.Html Msg) -> Html.Styled.Html Msg
