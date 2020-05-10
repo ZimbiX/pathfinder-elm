@@ -455,7 +455,7 @@ update msg model =
             )
 
         RequestNewEventsFromBackend ->
-            ( model, requestNewEvents model.gameId model.gameStateVersion )
+            ( model, requestNewEvents model.gameId (model.gameStateVersion + List.length model.queuedEventsForApplication) )
 
         GotEventsFromBackend result ->
             case result of
@@ -534,13 +534,14 @@ enqueueSubmissionOfNewGameEvent model =
     let
         playAgainEvent =
             { event = NewGameBackendEvent model.nextGameId
-            , version = model.gameStateVersion + List.length model.eventsQueuedForSubmission + 1
+            , version = model.gameStateVersion + 1
             }
     in
     { model
         | startingNewGame = True
         , eventsQueuedForSubmission = List.concat [ [ playAgainEvent ], model.eventsQueuedForSubmission ]
     }
+        |> incrementGameStateVersion
 
 
 promptForMazeCreatorNameIfUnnamed : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
@@ -627,6 +628,24 @@ updateInactiveMaze mazeUpdater model =
     }
 
 
+logVersionsOfGameStateAndConsideredEvent : String -> VersionedBackendEvent -> Model -> Model
+logVersionsOfGameStateAndConsideredEvent action firstEvent model =
+    Debug.log
+        (action
+            ++ " - gameStateVersion: "
+            ++ (model.gameStateVersion |> String.fromInt)
+            ++ ", event version"
+        )
+        firstEvent.version
+        |> (\_ -> model)
+
+
+incrementGameStateVersion : Model -> Model
+incrementGameStateVersion model =
+    model
+        |> (\_ -> { model | gameStateVersion = model.gameStateVersion + 1 |> Debug.log "incrementGameStateVersion - result" })
+
+
 applyNextEventFromServerIfReady : Model -> ( Model, Cmd Msg )
 applyNextEventFromServerIfReady model =
     case List.Extra.uncons model.queuedEventsForApplication of
@@ -635,33 +654,50 @@ applyNextEventFromServerIfReady model =
                 moveIfReady direction =
                     if playerCanStartMove model then
                         model
+                            |> logVersionsOfGameStateAndConsideredEvent "Applying event" firstEvent
                             |> startPlayerMove direction
-                            |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
+                            |> popEvent
 
                     else
                         model
 
+                applyDrawnMaze mazeBackend =
+                    logVersionsOfGameStateAndConsideredEvent "Applying event" firstEvent
+                        >> updateActiveMaze
+                            (\maze ->
+                                { maze
+                                    | position = mazeBackend.playerPosition
+                                    , creatorName = ProvidedCreatorName mazeBackend.creatorName
+                                    , golds = mazeBackend.golds
+                                    , walls = mazeBackend.walls |> wallsFromBackendWalls
+                                }
+                            )
+
                 isSwitchingMaze =
                     model.switchingMaze /= NotSwitchingMaze
+
+                isOldEvent =
+                    firstEvent.version <= model.gameStateVersion
+
+                popEvent model2 =
+                    { model2 | queuedEventsForApplication = laterEvents }
             in
-            if isSwitchingMaze then
+            if isOldEvent then
+                model
+                    |> logVersionsOfGameStateAndConsideredEvent "Dropping out of date event!" firstEvent
+                    |> popEvent
+                    |> applyNextEventFromServerIfReady
+
+            else if isSwitchingMaze then
                 ( model, Cmd.none )
 
             else
                 case firstEvent.event of
                     MazeDrawn mazeBackend ->
                         ( model
-                            |> updateActiveMaze
-                                (\maze ->
-                                    { maze
-                                        | position = mazeBackend.playerPosition
-                                        , creatorName = ProvidedCreatorName mazeBackend.creatorName
-                                        , golds = mazeBackend.golds
-                                        , walls = mazeBackend.walls |> wallsFromBackendWalls
-                                    }
-                                )
+                            |> applyDrawnMaze mazeBackend
                             |> completeMazeDrawing
-                            |> (\newModel -> { newModel | queuedEventsForApplication = laterEvents })
+                            |> popEvent
                         , Cmd.none
                         )
 
@@ -678,7 +714,12 @@ applyNextEventFromServerIfReady model =
                         ( moveIfReady MoveDown, Cmd.none )
 
                     NewGameBackendEvent nextGameId ->
-                        ( model, Process.sleep 0 |> Task.perform (\_ -> PlayAgain nextGameId) )
+                        ( model
+                            |> logVersionsOfGameStateAndConsideredEvent "Applying event" firstEvent
+                            |> popEvent
+                            |> incrementGameStateVersion
+                        , Process.sleep 0 |> Task.perform (\_ -> PlayAgain nextGameId)
+                        )
 
         Nothing ->
             ( model, Cmd.none )
@@ -719,12 +760,7 @@ queueNewEventsForApplication events model =
     in
     (case List.Extra.last events of
         Just latestEvent ->
-            ( { model
-                | gameStateVersion =
-                    latestEvent.version
-                        |> Debug.log "updated gameStateVersion to reflect version of latest event in queuedEventsForApplication"
-                , queuedEventsForApplication = queuedEventsForApplication
-              }
+            ( { model | queuedEventsForApplication = queuedEventsForApplication }
               --, Cmd.none
             , Process.sleep 100 |> Task.perform (\_ -> RequestNewEventsFromBackend)
             )
@@ -988,13 +1024,9 @@ submitQueuedEvents model =
 
         requests =
             List.map (submitEvent model.gameId) versionedEvents
-
-        newVersion =
-            model.gameStateVersion + List.length versionedEvents
     in
     ( { model
-        | gameStateVersion = newVersion
-        , eventsQueuedForSubmission = []
+        | eventsQueuedForSubmission = []
         , numEventsSubmitted = model.numEventsSubmitted + List.length versionedEvents
       }
     , Cmd.batch requests
@@ -1600,7 +1632,7 @@ startPlayerMove moveDirection model =
                         }
 
                 versionedEvent =
-                    { event = backendEvent, version = model.gameStateVersion + List.length model.eventsQueuedForSubmission + 1 }
+                    { event = backendEvent, version = model.gameStateVersion + 1 }
 
                 isApplyingServerEvent =
                     not (List.isEmpty model.queuedEventsForApplication)
@@ -1614,6 +1646,7 @@ startPlayerMove moveDirection model =
             in
             { model | eventsQueuedForSubmission = eventsQueuedForSubmission }
                 |> updateActiveMaze (\maze -> { maze | currentMove = newMove })
+                |> incrementGameStateVersion
     in
     case moveDirection of
         MoveRight ->
@@ -2138,12 +2171,13 @@ completeMazeDrawing model =
                                         , walls = activeMaze.walls |> backendWallsFromWalls
                                         , golds = activeMaze.golds
                                         }
-                                , version = model.gameStateVersion + List.length model.eventsQueuedForSubmission + 1
+                                , version = model.gameStateVersion + 1
                                 }
                               ]
                             ]
             in
             { model | eventsQueuedForSubmission = eventsQueuedForSubmission }
+                |> incrementGameStateVersion
                 |> updateActiveMaze
                     (\maze ->
                         { maze
