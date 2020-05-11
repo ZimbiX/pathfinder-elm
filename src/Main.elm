@@ -522,6 +522,7 @@ update msg model =
         PlayAgainClicked ->
             model
                 |> enqueueSubmissionOfNewGameEvent
+                |> markStartingNewGame
                 |> submitQueuedEvents
 
         PlayAgain nextGameId ->
@@ -548,6 +549,11 @@ startNewGame nextGameId model =
     ( model, Nav.load ("/#gameId=" ++ nextGameId) )
 
 
+markStartingNewGame : Model -> Model
+markStartingNewGame model =
+    { model | startingNewGame = True }
+
+
 enqueueSubmissionOfNewGameEvent : Model -> Model
 enqueueSubmissionOfNewGameEvent model =
     let
@@ -557,8 +563,7 @@ enqueueSubmissionOfNewGameEvent model =
             }
     in
     { model
-        | startingNewGame = True
-        , eventsQueuedForSubmission = List.concat [ [ playAgainEvent ], model.eventsQueuedForSubmission ]
+        | eventsQueuedForSubmission = List.concat [ [ playAgainEvent ], model.eventsQueuedForSubmission ]
     }
         |> incrementGameStateVersion
 
