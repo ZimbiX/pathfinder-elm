@@ -94,6 +94,7 @@ type alias Model =
     , eventsQueuedForSubmission : List VersionedBackendEvent
     , numEventsSubmitted : Int
     , numEventsSubmittedSuccessfully : Int
+    , errorReceivingEvents : Bool
     , navKey : Nav.Key
     , url : Url.Url
     , currentSeed : Seed
@@ -210,9 +211,16 @@ type Stage
 
 
 type Popup
-    = InfoPopup PopupMessage
-    | InputPopup PopupMessage
+    = InfoPopup PopupMessage PopupDismissAction
+    | InputPopup PopupMessage PopupDismissAction
+    | FatalErrorPopup PopupMessage PopupDismissAction
     | NoPopup
+
+
+type PopupDismissAction
+    = StartSwitchingMazesIfOtherMazeNotWon
+    | Reload
+    | NoPopupDismissAction
 
 
 type alias PopupMessage =
@@ -267,6 +275,7 @@ init ( seed, seedExtension ) url navKey =
     , eventsQueuedForSubmission = []
     , numEventsSubmitted = 0
     , numEventsSubmittedSuccessfully = 0
+    , errorReceivingEvents = False
     , navKey = navKey
     , url = url
     , currentSeed = initialSeed seed seedExtension
@@ -370,7 +379,7 @@ type Msg
     | FocusResult (Result Browser.Dom.Error ())
     | MazeCreatorNameChanged String
     | DoneButtonPressed
-    | DismissPopup
+    | PopupDismissed PopupDismissAction
     | RequestNewEventsFromBackend
     | GotEventsFromBackend (Result Http.Error String)
     | SentEventToBackend (Result Http.Error String)
@@ -404,11 +413,15 @@ update msg model =
 
                 Nothing ->
                     model
-                        |> dismissPopupIfEnterPressed rawKey
-                        |> completeMazeDrawingIfEnterPressed rawKey
-                        |> switchMazeIfMPressed rawKey
-                        |> clearEnterHandled
-                        |> submitQueuedEvents
+                        |> dismissPopupAndPerformActionIfEnterPressed rawKey
+                        |> (\( model2, cmd ) ->
+                                model2
+                                    |> completeMazeDrawingIfEnterPressed rawKey
+                                    |> switchMazeIfMPressed rawKey
+                                    |> clearEnterHandled
+                                    |> submitQueuedEvents
+                                    |> Tuple.mapSecond (\cmd2 -> Cmd.batch [ cmd, cmd2 ])
+                           )
 
         Tick deltaTime ->
             model
@@ -449,28 +462,30 @@ update msg model =
                 |> completeMazeDrawing
                 |> submitQueuedEvents
 
-        DismissPopup ->
-            ( model
-                |> dismissPopup
-            , Cmd.none
-            )
+        PopupDismissed popupDismissAction ->
+            model
+                |> dismissPopupAndPerformAction
 
         RequestNewEventsFromBackend ->
-            ( model, requestNewEvents model.gameId (model.gameStateVersion + List.length model.queuedEventsForApplication) )
+            ( { model | errorReceivingEvents = False }, requestNewEvents model.gameId (model.gameStateVersion + List.length model.queuedEventsForApplication) )
 
         GotEventsFromBackend result ->
             case result of
                 Ok eventsResponse ->
                     case eventsResponse |> Json.Decode.decodeString eventsDecoder of
                         Ok events ->
-                            model
-                                |> queueNewEventsForApplication events
+                            { model | errorReceivingEvents = False }
+                                |> queueNewEventsForApplicationAndRequestEventsAgainAfterSleep events
 
                         Err decodeErr ->
-                            ( eventsResponse, decodeErr ) |> Debug.log "Error decoding received new events" |> (\_ -> ( model, Cmd.none ))
+                            ( eventsResponse, decodeErr )
+                                |> Debug.log "Error decoding received new events - sleeping for 5s"
+                                |> (\_ -> ( { model | errorReceivingEvents = True }, requestNewEventsAfterMs 5000 ))
 
                 Err requestErr ->
-                    requestErr |> Debug.log "Error from requesting new events" |> (\_ -> ( model, Cmd.none ))
+                    requestErr
+                        |> Debug.log "Error requesting new events - sleeping for 5s"
+                        |> (\_ -> ( { model | errorReceivingEvents = True }, requestNewEventsAfterMs 5000 ))
 
         SentEventToBackend result ->
             case result of
@@ -481,7 +496,10 @@ update msg model =
                         |> startNewGameIfRequestedAndAllEventsAreSubmittedSuccessfully
 
                 Err requestErr ->
-                    requestErr |> Debug.log "Error submitting event" |> (\_ -> ( model, Cmd.none ))
+                    requestErr
+                        |> Debug.log "Error submitting event"
+                        -- TODO: Retry if not HTTP 409 Conflict
+                        |> (\_ -> ( { model | popup = FatalErrorPopup { messageLines = [ "Error: Encountered state conflict while submitting action. We need to reload the game now. You will unfortunately lose your last action (move or entire drawing)" ] } Reload }, Cmd.none ))
 
         LinkClicked urlRequest ->
             case urlRequest of
@@ -578,6 +596,7 @@ promptForMazeCreatorName model =
                         ++ ", what is your name?"
                     ]
                 }
+                NoPopupDismissAction
       }
     , Browser.Dom.focus "mazeCreatorNameInput"
         |> Task.attempt FocusResult
@@ -752,8 +771,8 @@ backendWallsFromWalls walls =
         walls
 
 
-queueNewEventsForApplication : List VersionedBackendEvent -> Model -> ( Model, Cmd Msg )
-queueNewEventsForApplication events model =
+queueNewEventsForApplicationAndRequestEventsAgainAfterSleep : List VersionedBackendEvent -> Model -> ( Model, Cmd Msg )
+queueNewEventsForApplicationAndRequestEventsAgainAfterSleep events model =
     let
         queuedEventsForApplication =
             List.concat [ model.queuedEventsForApplication, events ]
@@ -763,16 +782,21 @@ queueNewEventsForApplication events model =
         Just latestEvent ->
             ( { model | queuedEventsForApplication = queuedEventsForApplication }
               --, Cmd.none
-            , Process.sleep 100 |> Task.perform (\_ -> RequestNewEventsFromBackend)
+            , requestNewEventsAfterMs 100
             )
 
         Nothing ->
             ( model
               --, Cmd.none
-            , Process.sleep 1000 |> Task.perform (\_ -> RequestNewEventsFromBackend)
+            , requestNewEventsAfterMs 1000
             )
     )
         |> Tuple.mapFirst (\newModel -> { newModel | loadedInitialEvents = True })
+
+
+requestNewEventsAfterMs : Float -> Cmd Msg
+requestNewEventsAfterMs afterMs =
+    Process.sleep afterMs |> Task.perform (\_ -> RequestNewEventsFromBackend)
 
 
 requestNewEvents : String -> Int -> Cmd Msg
@@ -1205,7 +1229,7 @@ playerCanStartMove model =
                             False
 
                         NotSwitchingMaze ->
-                            True
+                            model.popup == NoPopup
 
                 WaitingForOtherMazeToBeDrawnStage ->
                     False
@@ -1409,25 +1433,25 @@ completeMazeDrawingIfEnterPressed rawKey model =
         model
 
 
-dismissPopupIfEnterPressed : RawKey -> Model -> Model
-dismissPopupIfEnterPressed rawKey model =
+dismissPopupAndPerformActionIfEnterPressed : RawKey -> Model -> ( Model, Cmd Msg )
+dismissPopupAndPerformActionIfEnterPressed rawKey model =
     if model.enterHandled == False then
         case Keyboard.anyKeyUpper rawKey of
             Just Enter ->
                 case model.popup of
                     NoPopup ->
-                        model
+                        ( model, Cmd.none )
 
                     _ ->
                         model
-                            |> dismissPopup
                             |> markEnterHandled
+                            |> dismissPopupAndPerformAction
 
             _ ->
-                model
+                ( model, Cmd.none )
 
     else
-        model
+        ( model, Cmd.none )
 
 
 markEnterHandled : Model -> Model
@@ -1440,23 +1464,46 @@ clearEnterHandled model =
     { model | enterHandled = False }
 
 
+performPopupDismissAction : PopupDismissAction -> Model -> ( Model, Cmd Msg )
+performPopupDismissAction popupDismissAction model =
+    case popupDismissAction of
+        StartSwitchingMazesIfOtherMazeNotWon ->
+            ( model
+                |> startSwitchingMazesIfOtherMazeNotWon
+            , Cmd.none
+            )
+
+        Reload ->
+            ( model, Nav.reload )
+
+        NoPopupDismissAction ->
+            ( model, Cmd.none )
+
+
+dismissPopupAndPerformAction : Model -> ( Model, Cmd Msg )
+dismissPopupAndPerformAction model =
+    case model.popup of
+        InputPopup popup popupDismissAction ->
+            model
+                |> dismissPopup
+                |> performPopupDismissAction popupDismissAction
+
+        InfoPopup popup popupDismissAction ->
+            model
+                |> dismissPopup
+                |> performPopupDismissAction popupDismissAction
+
+        FatalErrorPopup popup popupDismissAction ->
+            model
+                |> performPopupDismissAction popupDismissAction
+
+        NoPopup ->
+            ( model, Cmd.none )
+
+
 dismissPopup : Model -> Model
 dismissPopup model =
     { model | popup = NoPopup }
-        |> (\newModel ->
-                case model.mazes.active.stage of
-                    DrawingStage ->
-                        newModel
-
-                    WaitingForOtherMazeToBeDrawnStage ->
-                        newModel
-
-                    PlayingStage ->
-                        newModel
-
-                    FirstWinStage ->
-                        newModel |> startSwitchingMazesIfOtherMazeNotWon
-           )
 
 
 switchMazeIfMPressed : RawKey -> Model -> Model
@@ -2214,7 +2261,7 @@ completeMazeDrawing model =
                 complete
 
             else
-                { model | popup = InfoPopup { messageLines = [ "Maze is not possible to win!" ] } }
+                { model | popup = InfoPopup { messageLines = [ "Maze is not possible to win!" ] } NoPopupDismissAction }
 
         WaitingForOtherMazeToBeDrawnStage ->
             -- Impossible to get to?
@@ -2291,7 +2338,7 @@ endGameIfWon model =
                     cameSecondMessage
 
         winPopup =
-            InfoPopup { messageLines = [ message ] }
+            InfoPopup { messageLines = [ message ] } StartSwitchingMazesIfOtherMazeNotWon
 
         activeMaze =
             model.mazes.active
@@ -2460,6 +2507,7 @@ view model =
             [ instructions
             , viewBackground
             , viewUnsyncedEventsIndicator model.numEventsSubmitted model.numEventsSubmittedSuccessfully
+            , viewErrorReceivingEventsIndicator model.errorReceivingEvents
             , viewReplayProgressIndicator model.gameStateVersion (List.length model.queuedEventsForApplication)
             , lazy viewBoard model
             , lazy3 viewButtons stage isSwitching isShowingPopup
@@ -2470,6 +2518,7 @@ view model =
         loadingContent =
             [ div [] [ text "Reticulating splines..." ]
             , viewBackground
+            , viewErrorReceivingEventsIndicator model.errorReceivingEvents
             , viewGithubLink
             ]
 
@@ -3071,11 +3120,14 @@ viewSnappedDrawingPoint snappedDrawingPoint =
 viewPopup : Popup -> CreatorName -> Html.Styled.Html Msg
 viewPopup popup creatorName =
     case popup of
-        InfoPopup popupMessage ->
+        InfoPopup popupMessage popupDismissAction ->
             viewPopupShowingInfo popupMessage
 
-        InputPopup popupMessage ->
+        InputPopup popupMessage popupDismissAction ->
             viewPopupRequestingPlayerName popupMessage creatorName
+
+        FatalErrorPopup popupMessage popupDismissAction ->
+            viewPopupShowingError popupMessage popupDismissAction
 
         NoPopup ->
             div [ class "viewPopup_none" ] []
@@ -3095,7 +3147,7 @@ popupCss =
     css
         [ Css.position absolute
         , width (zoomPx w)
-        , height (zoomPx h)
+        , Css.minHeight (zoomPx h)
         , top (zoomPx ((gridSize.cellHeight * gridSize.rowCount * 0.95) / 2 - h / 2))
         , left (zoomPx (((gridSize.cellWidth * gridSize.columnCount) / 2 - w / 2) - border))
         , Css.fontSize (Css.em (zoom 1))
@@ -3125,7 +3177,36 @@ viewPopupShowingInfo popupMessage =
         , popupCss
         ]
         [ div [] (popupMessage.messageLines |> List.map (\messageLine -> div [] [ text messageLine ]))
-        , viewPopupDismissButton "Close"
+        , viewPopupDismissButton "Close" NoPopupDismissAction
+        ]
+
+
+viewPopupShowingError : PopupMessage -> PopupDismissAction -> Html.Styled.Html Msg
+viewPopupShowingError popupMessage popupDismissAction =
+    div
+        [ class "viewPopupShowingError"
+        , popupCss
+        , css
+            [ Css.padding (zoomPx 12)
+            , Css.boxSizing Css.borderBox
+            , Css.marginTop (zoomPx -78)
+            ]
+        ]
+        [ div []
+            (List.concat
+                [ [ Html.Styled.i
+                        [ class "material-icons"
+                        , css
+                            [ Css.fontSize (zoomPx 48)
+                            , Css.color (Css.hex "#f00")
+                            ]
+                        ]
+                        [ text "error" ]
+                  ]
+                , popupMessage.messageLines |> List.map (\messageLine -> div [] [ text messageLine ])
+                ]
+            )
+        , viewPopupDismissButton "Continue" popupDismissAction
         ]
 
 
@@ -3166,7 +3247,7 @@ viewPopupRequestingPlayerName popupMessage creatorName =
                 ]
             ]
             []
-        , viewPopupDismissButton "Submit"
+        , viewPopupDismissButton "Submit" NoPopupDismissAction
         ]
 
 
@@ -3227,7 +3308,7 @@ viewUnsyncedEventsIndicator numEventsSubmitted numEventsSubmittedSuccessfully =
                     , Css.left (zoomPx 7)
                     ]
                 ]
-                [ viewLoadingSpinner [ text numUnsyncedEvents ] ]
+                [ viewLoadingSpinner "#fff" [ text numUnsyncedEvents ] ]
             ]
 
          else
@@ -3235,8 +3316,30 @@ viewUnsyncedEventsIndicator numEventsSubmitted numEventsSubmittedSuccessfully =
         )
 
 
-viewLoadingSpinner : List (Html.Styled.Html Msg) -> Html.Styled.Html Msg
-viewLoadingSpinner children =
+viewErrorReceivingEventsIndicator : Bool -> Html.Styled.Html Msg
+viewErrorReceivingEventsIndicator errorReceivingEvents =
+    div
+        [ class "viewErrorReceivingEventsIndicator"
+        , Html.Styled.Attributes.title "Error receiving events! Retrying every five seconds"
+        ]
+        (if errorReceivingEvents then
+            [ div
+                [ css
+                    [ Css.position Css.absolute
+                    , Css.top (zoomPx (41 + gridSize.cellHeight))
+                    , Css.left (zoomPx 7)
+                    ]
+                ]
+                [ viewLoadingSpinner "#f00" [ text "!" ] ]
+            ]
+
+         else
+            []
+        )
+
+
+viewLoadingSpinner : String -> List (Html.Styled.Html Msg) -> Html.Styled.Html Msg
+viewLoadingSpinner hexColour children =
     let
         size =
             16
@@ -3256,8 +3359,8 @@ viewLoadingSpinner children =
                             , Css.height (zoomPx size)
                             , Css.property "content" "' '"
                             , Css.borderRadius (Css.pct 50)
-                            , Css.border3 (zoomPx 1) Css.solid (Css.hex "#fff")
-                            , Css.borderColor4 (Css.hex "#fff") Css.transparent (Css.hex "#fff") Css.transparent
+                            , Css.border3 (zoomPx 1) Css.solid (Css.hex hexColour)
+                            , Css.borderColor4 (Css.hex hexColour) Css.transparent (Css.hex hexColour) Css.transparent
                             , Css.animationName
                                 (Css.Animations.keyframes
                                     [ ( 0, [ Css.Animations.custom "transform" "rotate(0deg)" ] )
@@ -3280,7 +3383,7 @@ viewLoadingSpinner children =
                         , Css.lineHeight (zoomPx size)
                         , Css.fontSize (zoomPx (size * 0.625))
                         , Css.textAlign Css.center
-                        , Css.color (Css.hex "#fff")
+                        , Css.color (Css.hex hexColour)
                         ]
                     ]
                     children
@@ -3369,18 +3472,19 @@ viewButtons stage isSwitchingMaze isShowingPopup =
             div [ class "viewButtons" ] []
 
 
-viewPopupDismissButton : String -> Html.Styled.Html Msg
-viewPopupDismissButton buttonText =
+viewPopupDismissButton : String -> PopupDismissAction -> Html.Styled.Html Msg
+viewPopupDismissButton buttonText popupDismissAction =
     button
         [ css
-            [ width (zoomPx 120)
+            [ Css.minWidth (zoomPx 120)
             , height (zoomPx 50)
             , Css.margin2 (zoomPx 0) Css.auto
             , Css.marginTop (zoomPx 15)
+            , Css.padding2 (zoomPx 0) (zoomPx 18)
             , Css.fontSize (zoomPx 30)
             , fontFamily
             ]
-        , onClick DismissPopup
+        , onClick (PopupDismissed popupDismissAction)
         ]
         [ text buttonText ]
 

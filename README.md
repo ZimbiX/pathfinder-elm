@@ -64,8 +64,8 @@ $ ./scripts/build
 
 ### Todo
 
-- Handle permanent failure when submitting an event - HTTP 409 Conflict
-- Handle retryable failure when submitting an event
+- Handle retryable failure when submitting an event - not HTTP 409 Conflict
+- Poll for new events faster when the last event was very recent
 - Prevent lag causing a bounce off the edge of the maze one square too early
 - Fix sync bug - need to work out how to reproduce - if still present after having rearchitected tracking current state version
 - Fix bug where completing a game in one window makes the other get stuck with an invisible popup
@@ -77,7 +77,6 @@ $ ./scripts/build
 - Instantly replay game history upon page reload part-way through a game (no animation), but preserve how receiving an event from the opponent applies it as normal interaction (with animation)
 - Disable local interaction while it's the opponent's move
 - Display link for sharing with a friend to play against
-- Refactor to provide an event for the popup dismiss button
 - Call `switchMazes` from somewhere better
 - Count moves and wall hits and show this in the winning message
 - Prevent touchscreen button lag
