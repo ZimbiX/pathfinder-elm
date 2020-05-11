@@ -69,12 +69,13 @@ $ ./scripts/build
 - Prevent lag causing a bounce off the edge of the maze one square too early
 - Fix sync bug - need to work out how to reproduce - if still present after having rearchitected tracking current state version
 - Fix bug where completing a game in one window makes the other get stuck with an invisible popup
+- Make dismissing first win popup not immediately switch maze, but rather enable a button to continue
 - Submit the next game ID in an initial event so the 'New game' links are in sync
 - Make new game event prompt "Your opponent started a new game" before redirecting
 - Generate UUID to identify the user, and store in local storage - only when missing
 - Resume as the right player upon a page reload
 - Allow two players to draw their maze simultaneously on each device
-- Instantly replay game history upon page reload part-way through a game (no animation), but preserve how receiving an event from the opponent applies it as normal interaction (with animation)
+- Add fast-forward button to instantly replay game history upon page reload part-way through a game (no animation), but preserve how receiving an event from the opponent applies it as normal interaction (with animation)
 - Disable local interaction while it's the opponent's move
 - Display link for sharing with a friend to play against
 - Call `switchMazes` from somewhere better
@@ -84,12 +85,11 @@ $ ./scripts/build
 - Allow changing grid size
 - Saving a maze to be able to reuse it
 - Fade in new sections of traversed path
-- Make wall removal hitbox rectangular, matching orientation
 - Unit tests
 - Switch from `List.concat` to `(::)` operator
 - Prevent line drawing craziness on multitouch - check pointer ID is 1?
-- Automatically resize to fit viewport - probably requires using a custom HTML page template
-- Hold with a second finger to remove
+- Automatically resize to fit viewport - probably requires modifying the HTML page template
+- Hold with a second finger to remove / tap and hold then drag?
 - Split out to multiple files
 - Deduplicate walls when finishing drawing
 - Deduplicate golds
