@@ -1440,7 +1440,7 @@ completeMazeDrawingIfEnterPressed rawKey model =
 
 dismissPopupAndPerformActionIfEnterPressed : RawKey -> Model -> ( Model, Cmd Msg )
 dismissPopupAndPerformActionIfEnterPressed rawKey model =
-    if model.enterHandled == False then
+    if (model |> Debug.log "dismissPopupAndPerformActionIfEnterPressed - model").enterHandled == False then
         case Keyboard.anyKeyUpper rawKey of
             Just Enter ->
                 case model.popup of
@@ -2369,7 +2369,10 @@ endGameIfWon model =
                 { newModel | popup = winPopup }
 
             else
-                newModel |> dismissPopup
+                { newModel | popup = winPopup }
+                    |> dismissPopupAndPerformAction
+                    -- This would discard the reload Cmd, but it's only returned on fatal error, so that's fine for now
+                    |> Tuple.first
     in
     case model.mazes.active.stage of
         DrawingStage ->
@@ -2657,7 +2660,13 @@ viewBoard model =
                 viewPopup model.popup model.mazes.active.creatorName
 
             else
-                div [ class "viewPopup_none" ] []
+                div
+                    [ class "viewPopup_none"
+
+                    --, css [ Css.opacity (Css.num 0.5) ]
+                    ]
+                    --[ viewPopup model.popup model.mazes.active.creatorName ]
+                    []
     in
     div
         (List.concat
