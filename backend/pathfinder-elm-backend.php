@@ -58,7 +58,11 @@ function get_events_after_version() {
   $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
   function row_with_decoded_event($row) {
-    $row["event"] = json_decode($row["event"]);
+    if (strpos($_GET['id'], 'invalid-') === 0) {
+      $row["event"] = "Jim's Invalid Events";
+    } else {
+      $row["event"] = json_decode($row["event"]);
+    }
     if (isset($row["ip_info"])) {
       $row["ip_info"] = json_decode($row["ip_info"]);
     }
@@ -88,7 +92,15 @@ function get_events_after_version() {
 }
 
 if (!empty($_POST)) {
-  store_event_for_id();
+  if (strpos($_POST['id'], 'error-') === 0) {
+    http_response_code(500);
+    echo "fake bad";
+  } else {
+    store_event_for_id();
+  }
+} else if (strpos($_GET['id'], 'error-') === 0 && $_GET['after'] != '0') {
+  http_response_code(500);
+  echo "fake bad";
 } else {
   get_events_after_version();
 }
