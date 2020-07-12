@@ -15,6 +15,7 @@ command -v elm || yay -S elm-platform-bin
 
 command -v npm || yarn global add npm || yay -S npm
 
+command -v elm-test || npm install -g elm-test
 command -v elm-live || npm install -g elm-live
 command -v elm-live || { echo "npm package binaries were installed, but are not in your PATH" && exit 1; }
 

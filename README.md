@@ -64,6 +64,8 @@ $ ./scripts/build
 
 ### Todo
 
+- Unit tests
+- Allow two players to draw their maze simultaneously on each device
 - Handle retryable failure when submitting an event - not HTTP 409 Conflict
 - Poll for new events faster when the last event was very recent
 - Prevent lag causing a bounce off the edge of the maze one square too early
@@ -74,7 +76,6 @@ $ ./scripts/build
 - Make new game event prompt "Your opponent started a new game" before redirecting
 - Generate UUID to identify the user, and store in local storage - only when missing
 - Resume as the right player upon a page reload
-- Allow two players to draw their maze simultaneously on each device
 - Add fast-forward button to instantly replay game history upon page reload part-way through a game (no animation), but preserve how receiving an event from the opponent applies it as normal interaction (with animation)
 - Disable local interaction while it's the opponent's move
 - Display link for sharing with a friend to play against
@@ -85,7 +86,6 @@ $ ./scripts/build
 - Allow changing grid size
 - Saving a maze to be able to reuse it
 - Fade in new sections of traversed path
-- Unit tests
 - Switch from `List.concat` to `(::)` operator
 - Prevent line drawing craziness on multitouch - check pointer ID is 1?
 - Automatically resize to fit viewport - probably requires modifying the HTML page template

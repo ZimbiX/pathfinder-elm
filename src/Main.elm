@@ -1,4 +1,4 @@
-module Main exposing (Model, Msg(..), init, main, update, view)
+module Main exposing (..)
 
 import AStar
 import Basics.Extra exposing (fractionalModBy)
