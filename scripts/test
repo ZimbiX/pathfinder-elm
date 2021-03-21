@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -Eeuo pipefail
+
+cd "$(dirname "$0")/.."
+
+export PATH=node_modules/.bin:$PATH
+
+elm-spec --specRoot=spec

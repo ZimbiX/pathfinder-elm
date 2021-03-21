@@ -2,4 +2,5 @@
 /dist/
 /elm-stuff/
 /node_modules/
+/spec/elm-stuff/
 /elm.js
