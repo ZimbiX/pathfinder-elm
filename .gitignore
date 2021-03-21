@@ -1,4 +1,5 @@
-/elm-stuff/
-/dist/
-/elm.js
 /backend/db-config.json
+/dist/
+/elm-stuff/
+/node_modules/
+/elm.js

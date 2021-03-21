@@ -4,6 +4,9 @@ set -Eeuo pipefail
 
 cd "$(dirname "$0")/.."
 
+export PATH=node_modules/.bin:$PATH
+
+# For CI - in dev, instead use: ./scripts/setup
 command -v elm >/dev/null || npm install -g elm
 
 rm -rf dist

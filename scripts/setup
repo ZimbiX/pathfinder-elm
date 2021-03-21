@@ -2,7 +2,13 @@
 
 set -Eeuo pipefail
 
+cd "$(dirname "$0")/.."
+
+export PATH=node_modules/.bin:$PATH
+
 set -x
+
+env | grep -i NPM_CONFIG_PREFIX
 
 command -v elm-format || {
   # Need to manually import GPG keys for developer of elm-format
@@ -15,8 +21,6 @@ command -v elm || yay -S elm-platform-bin
 
 command -v npm || yarn global add npm || yay -S npm
 
-command -v elm-test || npm install -g elm-test
-command -v elm-live || npm install -g elm-live
-command -v elm-live || { echo "npm package binaries were installed, but are not in your PATH" && exit 1; }
+npm install
 
 { echo "Setup complete! =)"; } 2> /dev/null

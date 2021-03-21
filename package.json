@@ -1,0 +1,10 @@
+{
+  "name": "pathfinder-elm",
+  "version": "0.0.0",
+  "author": "Brendan Weibrecht",
+  "homepage": "https://github.com/ZimbiX/pathfinder-elm",
+  "devDependencies": {
+    "elm-live": "^4.0.2",
+    "elm-test": "^0.19.1-revision6"
+  }
+}
