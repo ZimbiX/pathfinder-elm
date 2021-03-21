@@ -255,7 +255,11 @@ type alias VersionedBackendEvent =
     }
 
 
-init : ( Int, List Int ) -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+type alias Flags =
+    ( Int, List Int )
+
+
+init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init ( seed, seedExtension ) url navKey =
     { mazes =
         { active = initialMaze "Player 1"
