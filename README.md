@@ -3,6 +3,7 @@
 <!-- MarkdownTOC autolink=true -->
 
 - [Play](#play)
+- [Screenshot](#screenshot)
 - [Elm](#elm)
 - [History](#history)
 - [Development](#development)
@@ -20,6 +21,10 @@ The game supports both same-device multiplayer and multi-device multiplayer; the
 You can play the game at:
 
 https://pathfinder-elm.netlify.app/
+
+## Screenshot
+
+<img src="screenshot.png" width="50%" />
 
 ## Elm
 
