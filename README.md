@@ -15,7 +15,9 @@
 
 ## Play
 
-Currently only same-device multiplayer is supported - multi-device is almost done! You can play the game at:
+The game supports both same-device multiplayer and multi-device multiplayer; the latter is pretty basic so far though, so don't move your opponent when it's turn! ;)
+
+You can play the game at:
 
 https://pathfinder-elm.netlify.app/
 
