@@ -24,7 +24,7 @@ https://pathfinder-elm.netlify.app/
 
 ## Screenshot
 
-<img src="screenshot.png" width="50%" />
+<img src="screenshot.png" width="48%" /> <img src="screenshot2.png" width="48%" />
 
 ## Elm
 
