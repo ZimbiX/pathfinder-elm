@@ -3,7 +3,7 @@
 <!-- MarkdownTOC autolink=true -->
 
 - [Play](#play)
-- [Screenshot](#screenshot)
+- [Screenshots](#screenshots)
 - [Elm](#elm)
 - [History](#history)
 - [Development](#development)
@@ -22,9 +22,9 @@ You can play the game at:
 
 https://pathfinder-elm.netlify.app/
 
-## Screenshot
+## Screenshots
 
-<img src="screenshot.png" width="50%" />
+<img src="screenshot.png" width="48%" /> <img src="screenshot2.png" width="48%" />
 
 ## Elm
 
