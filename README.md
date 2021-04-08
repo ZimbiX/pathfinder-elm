@@ -15,7 +15,7 @@
 
 ## Play
 
-The game supports both same-device multiplayer and multi-device multiplayer; the latter is pretty basic so far though, so don't move your opponent when it's turn! ;)
+The game supports both same-device multiplayer and multi-device multiplayer; the latter is pretty basic so far though, so don't move your opponent when it's their turn! ;)
 
 You can play the game at:
 
