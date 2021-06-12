@@ -98,10 +98,12 @@ if (!empty($_POST)) {
   } else {
     store_event_for_id();
   }
-} else if (strpos($_GET['id'], 'error-') === 0 && $_GET['after'] != '0') {
+} else if (isset($_GET['id']) && strpos($_GET['id'], 'error-') === 0 && $_GET['after'] != '0') {
   http_response_code(500);
   echo "fake bad";
-} else {
+} else if (isset($_GET['id']) && isset($_GET['after'])) {
   get_events_after_version();
+} else {
+  header('Location: https://pathfinder-elm.netlify.app/');
 }
 ?>
