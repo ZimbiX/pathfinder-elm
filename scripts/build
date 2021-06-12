@@ -7,7 +7,9 @@ cd "$(dirname "$0")/.."
 export PATH=node_modules/.bin:$PATH
 
 # For CI - in dev, instead use: ./scripts/setup
-command -v elm >/dev/null || npm install -g elm
+if ! command -v elm >/dev/null || [[ "$(elm --version)" != "0.19.1" ]]; then
+  npm install -g elm
+fi
 
 rm -rf dist
 mkdir dist
