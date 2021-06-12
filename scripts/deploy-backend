@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -Eeuo pipefail
+
+if [[ "${1-}" == "-w" || "${1-}" == "--watch" ]]; then
+  exec rerun \
+    --no-notify \
+    --pattern backend/pathfinder-elm-backend.php \
+    --name 'PathFinder backend deploy (next)' \
+    --exit \
+    bash -c "$0"
+fi
+
+cp -f \
+  backend/pathfinder-elm-backend.php \
+  /mnt/zimbico.net/zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend-next.php
+
+. ~/.dotfiles/system/notify.zsh
+notify-success PathFinder "Backend deployed (next)" pathfinder-backend-deployed
