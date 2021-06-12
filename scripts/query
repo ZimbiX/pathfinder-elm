@@ -17,10 +17,9 @@ reset() {
 move() {
   local direction version curlResult
   direction="$1"
-  echo "$direction..."
   version=$(cat "/tmp/pathfinder-elm-event-versions/$GAME_ID" 2>/dev/null || echo 0)
   ((++version))
-  echo "Sending event $version: $direction"
+  echo "Sending event $version: $direction..."
   curlResult=$(
     curl -sS -i \
       "$backend" \
@@ -28,8 +27,11 @@ move() {
       -d event='{"name": "'"$direction"'", "data": {}}' \
       -d version="$version"
   )
-  echo "$curlResult" | head -1 | grep -E '^HTTP/1.1 ' || echo
-  echo "$version" > "/tmp/pathfinder-elm-event-versions/$GAME_ID"
+  if echo "$curlResult" | head -1 | grep -E '^HTTP/1.1 20'; then
+    echo "$version" > "/tmp/pathfinder-elm-event-versions/$GAME_ID"
+  else
+    echo "$curlResult"
+  fi
 }
 
 game() {
