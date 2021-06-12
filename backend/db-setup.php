@@ -1,6 +1,6 @@
 <?php
-include('_config.php');
-include('_db-connect.php');
+require('_config.php');
+require('_db-connect.php');
 
 function reset_db() {
   global $con;
