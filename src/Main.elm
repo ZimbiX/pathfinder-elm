@@ -2525,6 +2525,7 @@ view model =
             , lazy3 viewButtons stage isSwitching isShowingPopup
             , newGameLink model.nextGameId [ text "New game" ]
             , viewGithubLink
+            , viewImagesPreload
             ]
 
         loadingContent =
@@ -2532,6 +2533,7 @@ view model =
             , viewBackground
             , viewErrorReceivingEventsIndicator model.errorReceivingEvents
             , viewGithubLink
+            , viewImagesPreload
             ]
 
         content =
@@ -3540,3 +3542,12 @@ viewGithubLink =
     div
         [ class "viewGithubLink" ]
         [ a [ href "https://github.com/ZimbiX/pathfinder-elm" ] [ text "GitHub" ] ]
+
+
+viewImagesPreload =
+    div
+        [ css [ Css.display Css.none ] ]
+        [ img [ src "/assets/images/player_hd.png" ] []
+        , img [ src "/assets/images/golden_hd.png" ] []
+        , img [ src "/assets/images/wall_h_hd.png" ] []
+        ]
