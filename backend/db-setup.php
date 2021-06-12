@@ -20,7 +20,7 @@ function reset_db() {
 }
 
 if (isset($_GET['reset'])) {
-  if (isset($_POST['password']) && $_POST['password'] === $config['admin']['password']) {
+  if (is_admin()) {
     echo 'Resetting database&hellip;<br/>';
 
     reset_db();

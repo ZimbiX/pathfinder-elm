@@ -5,6 +5,7 @@ set -Eeuo pipefail
 GAME_ID=${GAME_ID:-x}
 
 backend="http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend${NEXT+-next}.php"
+password=$(jq -r .admin.password backend/config.json)
 
 mkdir -p /tmp/pathfinder-elm-event-versions
 
@@ -36,12 +37,12 @@ move() {
 
 game() {
   echo "Fetching all events from this game (id: $GAME_ID)..." >&2
-  curl -sS "${backend}?id=$GAME_ID&after=0&all&ip" -v | jq .
+  curl -sS "${backend}?id=$GAME_ID&after=0&all&ip&password=$password" -v | jq .
 }
 
 all() {
   echo "Fetching all events from all games..." >&2
-  curl -sS "${backend}?all&ip" -v | jq .
+  curl -sS "${backend}?all&ip&password=$password" -v | jq .
 }
 
 console() {

@@ -64,7 +64,7 @@ function get_events_after_version() {
   }
 
   $sql = "select version, event, date_format(convert_tz(at, 'SYSTEM', 'UTC'), '%Y-%m-%dT%TZ') as at" .
-    (isset($_GET['ip']) ? ", ip_info" : "") .
+    ((isset($_GET['ip']) && is_admin()) ? ", ip_info" : "") .
     " from Store where id = ? and version > ? order by version";
 
   $stmt = $con->prepare($sql);
@@ -97,7 +97,7 @@ function get_events_after_version() {
 function get_all_events() {
   global $con;
   $sql = "select id, version, event, date_format(convert_tz(at, 'SYSTEM', 'UTC'), '%Y-%m-%dT%TZ') as at" .
-    (isset($_GET['ip']) ? ", ip_info" : "") .
+    ((isset($_GET['ip']) && is_admin()) ? ", ip_info" : "") .
     " from Store";
 
   $stmt = $con->prepare($sql);
@@ -121,7 +121,7 @@ if (!empty($_POST)) {
 } else if (isset($_GET['id']) && strpos($_GET['id'], 'error-') === 0 && $_GET['after'] != '0') {
   http_response_code(500);
   echo "fake bad";
-} else if (!isset($_GET['id']) && isset($_GET['all'])) {
+} else if (!isset($_GET['id']) && isset($_GET['all']) && is_admin()) {
   get_all_events();
 } else if (isset($_GET['id']) && isset($_GET['after'])) {
   get_events_after_version();
