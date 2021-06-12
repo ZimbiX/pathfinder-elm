@@ -1,9 +1,9 @@
 <?php
-if (isset($_GET["reset"])) {
-  echo 'Resetting database&hellip;<br/>';
+include('_config.php');
+include('_db-connect.php');
 
-  require('_db-connect.php');
-
+function reset_db() {
+  global $con;
   mysqli_query($con,"DROP TABLE Store"); // remove table if it already exists
   $command = "CREATE TABLE Store
     (
@@ -17,9 +17,25 @@ if (isset($_GET["reset"])) {
   if (!mysqli_query($con,$command)) {
     exit("Failed to create Store table: " . mysqli_error($con));
   }
+}
 
-  echo 'Database has been reset.';
+if (isset($_GET['reset'])) {
+  if (isset($_POST['password']) && $_POST['password'] === $config['admin']['password']) {
+    echo 'Resetting database&hellip;<br/>';
+
+    reset_db();
+
+    echo 'Database has been reset.';
+  } else {
+    echo 'Admin password wrong.';
+  }
 } else {
-  echo 'I confirm I want to <a href="db-setup.php?reset">reset the database</a>';
+?>
+<form action="db-setup.php?reset" method="POST">
+  <p>Enter password to reset the database:</p>
+  <input type="text" name="password" />
+  <input type="submit" />
+</form>
+<?php
 }
 ?>

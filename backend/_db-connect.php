@@ -1,7 +1,5 @@
 <?php
-// SQL Nonsense
-
-$db_config = json_decode(file_get_contents('db-config.json'), true);
+$db_config = $config['database'];
 
 // connect to the database
 $con = mysqli_connect(
