@@ -1,0 +1,81 @@
+#!/bin/bash
+
+set -Eeuo pipefail
+
+GAME_ID=${GAME_ID:-x}
+
+backend="http://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend${NEXT+-next}.php"
+
+mkdir -p /tmp/pathfinder-elm-event-versions
+
+reset() {
+  echo "Resetting database..." >&2
+  curl -sSf "http://www.zimbico.net/pathfinder-elm-backend/db-setup.php?reset"
+  echo 0 > "/tmp/pathfinder-elm-event-versions/$GAME_ID"
+}
+
+move() {
+  local direction version curlResult
+  direction="$1"
+  echo "$direction..."
+  version=$(cat "/tmp/pathfinder-elm-event-versions/$GAME_ID" 2>/dev/null || echo 0)
+  ((++version))
+  echo "Sending event $version: $direction"
+  curlResult=$(
+    curl -sS -i \
+      "$backend" \
+      -d id="$GAME_ID" \
+      -d event='{"name": "'"$direction"'", "data": {}}' \
+      -d version="$version"
+  )
+  echo "$curlResult" | head -1 | grep -E '^HTTP/1.1 ' || echo
+  echo "$version" > "/tmp/pathfinder-elm-event-versions/$GAME_ID"
+}
+
+game() {
+  echo "Fetching all events from this game (id: $GAME_ID)..." >&2
+  curl -sS "${backend}?id=$GAME_ID&after=0&all&ip" -v | jq .
+}
+
+all() {
+  echo "Fetching all events from all games..." >&2
+  curl -sS "${backend}?all&ip" -v | jq .
+}
+
+console() {
+  while :; do
+    echo "Action? [w,a,s,d / arrows]: Move, [g]: Fetch all events from this game, [q]: Quit"
+    read -r -n 1 -s char
+    case "$char" in
+      w) move MoveUp;;
+      a) move MoveLeft;;
+      s) move MoveDown;;
+      d) move MoveRight;;
+      g) game;;
+      q) echo Quit; exit 0;;
+      # Arrow keys:
+      $'\x1b')
+        read -r -n 1 -s subchar1
+        read -r -n 1 -s subchar2
+        case "$subchar1$subchar2" in
+          [A) move MoveUp;;
+          [D) move MoveLeft;;
+          [B) move MoveDown;;
+          [C) move MoveRight;;
+          *) echo "Unknown command: "; echo "$char$subchar1$subchar2" | xxd;;
+        esac
+        ;;
+      *) echo "Unknown command: "; echo "$char" | xxd;;
+    esac
+    echo
+  done
+}
+
+case "${1-}" in
+  console) console;;
+  move) shift; move "$@";;
+  game) game;;
+  all) all;;
+  reset) reset;;
+  *) echo "Unknown command"; exit 1;;
+esac
