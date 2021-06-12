@@ -39,6 +39,18 @@ function store_event_for_id() {
   }
 }
 
+function row_with_decoded_event($row) {
+  if (isset($_GET['id']) && strpos($_GET['id'], 'invalid-') === 0) {
+    $row["event"] = "Jim's Invalid Events";
+  } else {
+    $row["event"] = json_decode($row["event"]);
+  }
+  if (isset($row["ip_info"])) {
+    $row["ip_info"] = json_decode($row["ip_info"]);
+  }
+  return $row;
+}
+
 function get_events_after_version() {
   global $con;
   $id = $_GET['id'];
@@ -56,18 +68,6 @@ function get_events_after_version() {
   $stmt->bind_param("si", $id, $after_version);
   $stmt->execute();
   $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-  function row_with_decoded_event($row) {
-    if (strpos($_GET['id'], 'invalid-') === 0) {
-      $row["event"] = "Jim's Invalid Events";
-    } else {
-      $row["event"] = json_decode($row["event"]);
-    }
-    if (isset($row["ip_info"])) {
-      $row["ip_info"] = json_decode($row["ip_info"]);
-    }
-    return $row;
-  }
 
   function only_contiguous_versions($after_version, $events) {
     $contiguous = [];
