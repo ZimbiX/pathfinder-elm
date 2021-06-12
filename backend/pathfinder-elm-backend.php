@@ -91,6 +91,23 @@ function get_events_after_version() {
   }
 }
 
+function get_all_events() {
+  global $con;
+  $sql = "select id, version, event, date_format(convert_tz(at, 'SYSTEM', 'UTC'), '%Y-%m-%dT%TZ') as at" .
+    (isset($_GET['ip']) ? ", ip_info" : "") .
+    " from Store";
+
+  $stmt = $con->prepare($sql);
+  $stmt->execute();
+  $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+  if ($result) {
+    echo json_encode(array_map("row_with_decoded_event", $result));
+  } else {
+    echo json_encode([]);
+  }
+}
+
 if (!empty($_POST)) {
   if (strpos($_POST['id'], 'error-') === 0) {
     http_response_code(500);
@@ -101,6 +118,8 @@ if (!empty($_POST)) {
 } else if (isset($_GET['id']) && strpos($_GET['id'], 'error-') === 0 && $_GET['after'] != '0') {
   http_response_code(500);
   echo "fake bad";
+} else if (!isset($_GET['id']) && isset($_GET['all'])) {
+  get_all_events();
 } else if (isset($_GET['id']) && isset($_GET['after'])) {
   get_events_after_version();
 } else {
