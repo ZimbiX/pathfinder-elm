@@ -1,0 +1,7 @@
+Order deny,allow
+Deny from all
+
+<Files ~ "^(pathfinder-elm-backend(-next)?|db-setup)\.php$">
+  Allow from all
+</Files>
+
