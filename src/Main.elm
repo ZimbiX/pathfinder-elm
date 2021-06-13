@@ -3495,7 +3495,8 @@ viewButtons stage isSwitchingMaze isShowingPopup =
 viewPopupDismissButton : String -> PopupDismissAction -> Html.Styled.Html Msg
 viewPopupDismissButton buttonText popupDismissAction =
     button
-        [ css
+        [ Html.Styled.Attributes.id "popupDismissButton"
+        , css
             [ Css.minWidth (zoomPx 120)
             , height (zoomPx 50)
             , Css.margin2 (zoomPx 0) Css.auto
