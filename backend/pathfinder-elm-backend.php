@@ -54,6 +54,17 @@ function row_with_decoded_event($row) {
   return $row;
 }
 
+function only_contiguous_versions($after_version, $events) {
+  $contiguous = [];
+  $expected_next_version = $after_version;
+  foreach ($events as $row) {
+    $expected_next_version++;
+    if ($row['version'] != $expected_next_version) { break; }
+    array_push($contiguous, $row);
+  }
+  return $contiguous;
+}
+
 function get_events_after_version() {
   global $con;
   $id = $_GET['id'];
@@ -72,26 +83,24 @@ function get_events_after_version() {
   $stmt->execute();
   $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-  function only_contiguous_versions($after_version, $events) {
-    $contiguous = [];
-    $expected_next_version = $after_version;
-    foreach ($events as $row) {
-      $expected_next_version++;
-      if ($row['version'] != $expected_next_version) { break; }
-      array_push($contiguous, $row);
-    }
-    return $contiguous;
+  if (!$result) {
+    $return = [];
+    return $return;
   }
+  if (isset($_GET['all'])) {
+    $return = array_map("row_with_decoded_event", $result);
+    return $return;
+  }
+  $return = only_contiguous_versions($after_version, array_map("row_with_decoded_event", $result));
+  return $return;
+}
 
-  if ($result) {
-    if (isset($_GET['all'])) {
-      echo json_encode(array_map("row_with_decoded_event", $result));
-    } else {
-      echo json_encode(only_contiguous_versions($after_version, array_map("row_with_decoded_event", $result)));
-    }
-  } else {
-    echo json_encode([]);
-  }
+function wait_for_events_after_version() {
+  // $events = []
+  do {
+    $events = get_events_after_version();
+  } while ($events == [] && usleep(50000) != 'none');
+  return $events;
 }
 
 function get_all_events() {
@@ -124,7 +133,11 @@ if (!empty($_POST)) {
 } else if (!isset($_GET['id']) && isset($_GET['all']) && is_admin()) {
   get_all_events();
 } else if (isset($_GET['id']) && isset($_GET['after'])) {
-  get_events_after_version();
+  if (isset($_GET['wait'])) {
+    echo json_encode(wait_for_events_after_version());
+  } else {
+    echo json_encode(get_events_after_version());
+  }
 } else {
   header('Location: https://pathfinder-elm.netlify.app/');
 }

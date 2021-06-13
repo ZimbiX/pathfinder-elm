@@ -47,6 +47,7 @@ settings =
         { delaySeconds = 0.2
         , animationDurationSeconds = 0.8
         }
+    , backendUrl = "https://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php"
     }
 
 
@@ -255,6 +256,11 @@ type alias VersionedBackendEvent =
     }
 
 
+type WaitForEvents
+    = DontWaitForEvents
+    | DoWaitForEvents
+
+
 type alias Flags =
     ( Int, List Int )
 
@@ -368,7 +374,7 @@ generateNextGameId model =
 startEventPolling : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 startEventPolling ( model, cmd ) =
     ( model, cmd )
-        |> Tuple.mapSecond (\c -> Cmd.batch [ c, requestNewEvents model.gameId 0 ])
+        |> Tuple.mapSecond (\c -> Cmd.batch [ c, requestNewEvents model.gameId 0 DontWaitForEvents ])
 
 
 
@@ -471,7 +477,7 @@ update msg model =
                 |> dismissPopupAndPerformAction
 
         RequestNewEventsFromBackend ->
-            ( { model | errorReceivingEvents = False }, requestNewEvents model.gameId (model.gameStateVersion + List.length model.queuedEventsForApplication) )
+            ( { model | errorReceivingEvents = False }, requestNewEvents model.gameId (model.gameStateVersion + List.length model.queuedEventsForApplication) DoWaitForEvents )
 
         GotEventsFromBackend result ->
             case result of
@@ -808,10 +814,19 @@ requestNewEventsAfterMs afterMs =
     Process.sleep afterMs |> Task.perform (\_ -> RequestNewEventsFromBackend)
 
 
-requestNewEvents : String -> Int -> Cmd Msg
-requestNewEvents gameId afterVersion =
+requestNewEvents : String -> Int -> WaitForEvents -> Cmd Msg
+requestNewEvents gameId afterVersion waitForEvents =
+    let
+        wait =
+            case waitForEvents of
+                DontWaitForEvents ->
+                    ""
+
+                DoWaitForEvents ->
+                    "&wait"
+    in
     Http.get
-        { url = "https://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php?id=" ++ gameId ++ "&after=" ++ String.fromInt afterVersion
+        { url = settings.backendUrl ++ "?id=" ++ gameId ++ "&after=" ++ String.fromInt afterVersion ++ wait
         , expect = Http.expectString GotEventsFromBackend
         }
 
@@ -1043,7 +1058,7 @@ submitEvent gameId versionedEvent =
             ]
     in
     Http.post
-        { url = "https://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php"
+        { url = settings.backendUrl
         , body = body |> formUrlencoded |> Http.stringBody "application/x-www-form-urlencoded"
         , expect = Http.expectString SentEventToBackend
         }
