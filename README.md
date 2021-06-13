@@ -76,6 +76,7 @@ $ ./scripts/build
 - Unit tests
 - Allow two players to draw their maze simultaneously on each device
 - Handle retryable failure when submitting an event - not HTTP 409 Conflict
+- Fix bug where name prompt is shown again after submitting blank then right-clicking
 - Poll for new events faster when the last event was very recent
 - Prevent lag causing a bounce off the edge of the maze one square too early
 - Fix sync bug - need to work out how to reproduce - if still present after having rearchitected tracking current state version
