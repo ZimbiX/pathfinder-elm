@@ -1,0 +1,11 @@
+{
+  "admin": {
+    "password": "pathfinder_elm"
+  },
+  "database": {
+    "server": "db",
+    "db_name": "pathfinder_elm",
+    "username": "pathfinder_elm",
+    "password": "pathfinder_elm"
+  }
+}

@@ -1,0 +1,41 @@
+version: '3.1'
+
+services:
+
+  db:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: pathfinder_elm
+      MYSQL_DATABASE: pathfinder_elm
+      MYSQL_USER: pathfinder_elm
+      MYSQL_PASSWORD: pathfinder_elm
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - 3306:3306
+
+  adminer:
+    depends_on:
+      - db
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+  backend:
+    depends_on:
+      - db
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    volumes:
+      - .:/var/www/html
+      - ./backend/config-dev.json:/var/www/html/backend/config.json
+    working_dir: /var/www/html
+    ports:
+      - 5000:80
+
+volumes:
+  db-data: ~

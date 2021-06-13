@@ -48,6 +48,8 @@ settings =
         , animationDurationSeconds = 0.8
         }
     , backendUrl = "https://www.zimbico.net/pathfinder-elm-backend/pathfinder-elm-backend.php"
+
+    --, backendUrl = "http://localhost:5000/backend/pathfinder-elm-backend.php"
     }
 
 
