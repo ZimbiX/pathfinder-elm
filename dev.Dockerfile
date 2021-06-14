@@ -1,9 +1,11 @@
 FROM alpine
 
-RUN apk add \
+RUN apk add --update \
   bash \
   curl \
   npm
+
+RUN npm install npm@latest -g
 
 ENV ELM_VERSION 0.19.1
 
