@@ -56,9 +56,19 @@ tileCoordinateGlobal =
 
 gridPositionToGlobalCoordinate : App.Position -> App.Coordinate
 gridPositionToGlobalCoordinate gridPosition =
-    { x = App.gridBorder.left + App.settings.boardZoom * App.gridSize.cellWidth * (gridPosition.column + 1)
-    , y = App.gridBorder.top + App.settings.boardZoom * App.gridSize.cellHeight * (gridPosition.row + 1)
+    { x = columnToGlobalX gridPosition.column
+    , y = rowToGlobalY gridPosition.row
     }
+
+
+columnToGlobalX : Float -> Float
+columnToGlobalX column =
+    App.gridBorder.left + App.settings.boardZoom * App.gridSize.cellWidth * (column + 1)
+
+
+rowToGlobalY : Float -> Float
+rowToGlobalY row =
+    App.gridBorder.top + App.settings.boardZoom * App.gridSize.cellHeight * (row + 1)
 
 
 loadingScreenSpec : Spec App.Model App.Msg
@@ -134,6 +144,45 @@ loadingScreenSpec =
                 |> it "places a gold there"
                     (Observer.observeModel (\model -> model.mazes.active.golds)
                         |> expect (Claim.isEqual Debug.toString [ tilePosition ])
+                    )
+            )
+        , scenario "drawing walls"
+            (given (app [ noEventsHttpStub ])
+                |> when "a horizontal line is drawn along tile edges"
+                    [ Markup.target << by [ id "mazeCreatorNameInput" ]
+                    , Event.input "Fred"
+                    , Markup.target << by [ id "popupDismissButton" ]
+                    , Event.click
+
+                    --- TODO: Deduplicate the above
+                    , Markup.target << by [ class "activeMaze" ]
+                    , Event.trigger "pointerdown" <|
+                        Json.Encode.object
+                            [ ( "pageX", Json.Encode.float <| columnToGlobalX -0.5 )
+                            , ( "pageY", Json.Encode.float <| rowToGlobalY -0.5 )
+                            , ( "buttons", Json.Encode.int 1 )
+                            ]
+                    , Event.trigger "pointerdown" <|
+                        Json.Encode.object
+                            [ ( "pageX", Json.Encode.float <| columnToGlobalX 1.5 )
+                            , ( "pageY", Json.Encode.float <| rowToGlobalY -0.5 )
+                            , ( "buttons", Json.Encode.int 1 )
+                            ]
+                    , Event.trigger "pointerup" <|
+                        Json.Encode.object
+                            [ ( "pageX", Json.Encode.float <| columnToGlobalX 1.5 )
+                            , ( "pageY", Json.Encode.float <| rowToGlobalY -0.5 )
+                            , ( "buttons", Json.Encode.int 0 )
+                            ]
+                    ]
+                |> it "draws walls between the points"
+                    (Observer.observeModel (\model -> model.mazes.active.walls)
+                        |> expect
+                            (Claim.isEqual Debug.toString
+                                [ { column = 1, row = -0.5, orientation = App.Horizontal, hidden = False, opacity = 1 }
+                                , { column = 0, row = -0.5, orientation = App.Horizontal, hidden = False, opacity = 1 }
+                                ]
+                            )
                     )
             )
         ]

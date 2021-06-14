@@ -410,7 +410,7 @@ type MoveDirection
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
+    case Debug.log "update msg" msg of
         MoveButtonPressed moveDirection ->
             model
                 |> tryStartPlayerMove moveDirection
