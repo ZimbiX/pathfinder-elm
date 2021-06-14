@@ -1,5 +1,6 @@
 module SampleSpec exposing (main)
 
+import Json.Encode
 import Main as App
 import Runner
 import Spec exposing (..)
@@ -40,6 +41,24 @@ app httpStubs =
             , onUrlRequest = App.LinkClicked
             }
         |> Spec.Http.Stub.serve httpStubs
+
+
+tilePosition : App.Position
+tilePosition =
+    { column = 10, row = 2 }
+
+
+tileCoordinateGlobal : App.Coordinate
+tileCoordinateGlobal =
+    gridPositionToGlobalCoordinate tilePosition
+        |> Debug.log "tileCoordinateGlobal"
+
+
+gridPositionToGlobalCoordinate : App.Position -> App.Coordinate
+gridPositionToGlobalCoordinate gridPosition =
+    { x = App.gridBorder.left + App.settings.boardZoom * App.gridSize.cellWidth * (gridPosition.column + 1)
+    , y = App.gridBorder.top + App.settings.boardZoom * App.gridSize.cellHeight * (gridPosition.row + 1)
+    }
 
 
 loadingScreenSpec : Spec App.Model App.Msg
@@ -88,6 +107,34 @@ loadingScreenSpec =
                             |> expect Claim.isSomething
                         )
                     ]
+            )
+        , scenario "placing a gold"
+            (given (app [ noEventsHttpStub ])
+                |> when "the centre of a tile is clicked"
+                    [ Markup.target << by [ id "mazeCreatorNameInput" ]
+                    , Event.input "Fred"
+                    , Markup.target << by [ id "popupDismissButton" ]
+                    , Event.click
+
+                    --- TODO: Deduplicate the above
+                    , Markup.target << by [ class "activeMaze" ]
+                    , Event.trigger "pointerdown" <|
+                        Json.Encode.object
+                            [ ( "pageX", Json.Encode.float tileCoordinateGlobal.x )
+                            , ( "pageY", Json.Encode.float tileCoordinateGlobal.y )
+                            , ( "buttons", Json.Encode.int 1 )
+                            ]
+                    , Event.trigger "pointerup" <|
+                        Json.Encode.object
+                            [ ( "pageX", Json.Encode.float tileCoordinateGlobal.x )
+                            , ( "pageY", Json.Encode.float tileCoordinateGlobal.y )
+                            , ( "buttons", Json.Encode.int 0 )
+                            ]
+                    ]
+                |> it "places a gold there"
+                    (Observer.observeModel (\model -> model.mazes.active.golds)
+                        |> expect (Claim.isEqual Debug.toString [ tilePosition ])
+                    )
             )
         ]
 
