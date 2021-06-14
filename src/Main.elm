@@ -3569,3 +3569,8 @@ viewImagesPreload =
         , img [ src "/assets/images/golden_hd.png" ] []
         , img [ src "/assets/images/wall_h_hd.png" ] []
         ]
+
+
+stubDebug : String -> a -> a
+stubDebug msg obj =
+    obj

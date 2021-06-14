@@ -13,5 +13,20 @@ fi
 
 rm -rf dist
 mkdir dist
-cp -r assets src/index.html dist
-elm make src/Main.elm --output=dist/elm.js
+cp -r assets dist
+
+cat src/index.html | sed -E 's/"elm.js"/"elm.min.js"/g' > dist/index.html
+
+js=dist/elm.js
+min=dist/elm.min.js
+
+mkdir -p tmp
+cat src/Main.elm | sed -E 's/Debug.log/stubDebug/g' > tmp/Main.elm
+elm make --optimize --output=$js tmp/Main.elm
+
+uglifyjs $js --compress "pure_funcs=[F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9],pure_getters,keep_fargs=false,unsafe_comps,unsafe" \
+  | uglifyjs --mangle --output $min
+
+echo "Initial size:  $(cat $js | wc -c) bytes  ($js)"
+echo "Minified size: $(cat $min | wc -c) bytes  ($min)"
+echo "Gzipped size:  $(cat $min | gzip -c | wc -c) bytes"
