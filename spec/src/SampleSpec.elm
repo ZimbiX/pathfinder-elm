@@ -2,9 +2,11 @@ module SampleSpec exposing (main)
 
 import Json.Encode
 import Main as App
+import Process
 import Runner
 import Spec exposing (..)
 import Spec.Claim as Claim
+import Spec.Command
 import Spec.Http
 import Spec.Http.Route
 import Spec.Http.Stub exposing (HttpResponseStub)
@@ -13,6 +15,8 @@ import Spec.Markup.Event as Event
 import Spec.Markup.Selector exposing (..)
 import Spec.Observer as Observer
 import Spec.Setup as Setup
+import Spec.Time
+import Task
 
 
 randomSeed =
@@ -184,6 +188,43 @@ loadingScreenSpec =
                                 ]
                             )
                     )
+            )
+        , scenario "finishing drawing"
+            (given (app [ noEventsHttpStub ])
+                |> when "a gold is placed, the done button clicked, and the board flip animation waited for"
+                    [ Markup.target << by [ id "mazeCreatorNameInput" ]
+                    , Event.input "Fred"
+                    , Markup.target << by [ id "popupDismissButton" ]
+                    , Event.click
+
+                    --- TODO: Deduplicate the above
+                    , Markup.target << by [ class "activeMaze" ]
+                    , Event.trigger "pointerdown" <|
+                        Json.Encode.object
+                            [ ( "pageX", Json.Encode.float tileCoordinateGlobal.x )
+                            , ( "pageY", Json.Encode.float tileCoordinateGlobal.y )
+                            , ( "buttons", Json.Encode.int 1 )
+                            ]
+                    , Event.trigger "pointerup" <|
+                        Json.Encode.object
+                            [ ( "pageX", Json.Encode.float tileCoordinateGlobal.x )
+                            , ( "pageY", Json.Encode.float tileCoordinateGlobal.y )
+                            , ( "buttons", Json.Encode.int 0 )
+                            ]
+                    , Markup.target << by [ class "doneButton" ]
+                    , Event.click
+                    , Spec.Command.send (Process.sleep 0 |> Task.perform (\_ -> App.Tick 4000))
+                    ]
+                |> observeThat
+                    [ it "has finished switching maze"
+                        (Observer.observeModel (\model -> model.switchingMaze)
+                            |> expect (Claim.isEqual Debug.toString App.NotSwitchingMaze)
+                        )
+                    , it "switches to the other maze"
+                        (Observer.observeModel (\model -> model.mazes.inactive.golds)
+                            |> expect (Claim.isEqual Debug.toString [ tilePosition ])
+                        )
+                    ]
             )
         ]
 

@@ -3547,7 +3547,8 @@ viewArrowButton moveDirection buttonText =
 viewDoneButton : Bool -> Html.Styled.Html Msg
 viewDoneButton disabled =
     button
-        [ css
+        [ class "doneButton"
+        , css
             [ width (px 160)
             , height (px 100)
             , Css.fontSize (px 50)
