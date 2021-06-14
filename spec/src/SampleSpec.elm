@@ -15,6 +15,7 @@ import Spec.Markup.Event as Event
 import Spec.Markup.Selector exposing (..)
 import Spec.Observer as Observer
 import Spec.Setup as Setup
+import Spec.Step
 import Spec.Time
 import Task
 
@@ -132,18 +133,8 @@ loadingScreenSpec =
 
                     --- TODO: Deduplicate the above
                     , Markup.target << by [ class "activeMaze" ]
-                    , Event.trigger "pointerdown" <|
-                        Json.Encode.object
-                            [ ( "pageX", Json.Encode.float tileCoordinateGlobal.x )
-                            , ( "pageY", Json.Encode.float tileCoordinateGlobal.y )
-                            , ( "buttons", Json.Encode.int 1 )
-                            ]
-                    , Event.trigger "pointerup" <|
-                        Json.Encode.object
-                            [ ( "pageX", Json.Encode.float tileCoordinateGlobal.x )
-                            , ( "pageY", Json.Encode.float tileCoordinateGlobal.y )
-                            , ( "buttons", Json.Encode.int 0 )
-                            ]
+                    , pointerdownEvent App.LeftMouseButton tilePosition
+                    , pointerupEvent App.NoMouseButton tilePosition
                     ]
                 |> it "places a gold there"
                     (Observer.observeModel (\model -> model.mazes.active.golds)
@@ -160,24 +151,9 @@ loadingScreenSpec =
 
                     --- TODO: Deduplicate the above
                     , Markup.target << by [ class "activeMaze" ]
-                    , Event.trigger "pointerdown" <|
-                        Json.Encode.object
-                            [ ( "pageX", Json.Encode.float <| columnToGlobalX -0.5 )
-                            , ( "pageY", Json.Encode.float <| rowToGlobalY -0.5 )
-                            , ( "buttons", Json.Encode.int 1 )
-                            ]
-                    , Event.trigger "pointerdown" <|
-                        Json.Encode.object
-                            [ ( "pageX", Json.Encode.float <| columnToGlobalX 1.5 )
-                            , ( "pageY", Json.Encode.float <| rowToGlobalY -0.5 )
-                            , ( "buttons", Json.Encode.int 1 )
-                            ]
-                    , Event.trigger "pointerup" <|
-                        Json.Encode.object
-                            [ ( "pageX", Json.Encode.float <| columnToGlobalX 1.5 )
-                            , ( "pageY", Json.Encode.float <| rowToGlobalY -0.5 )
-                            , ( "buttons", Json.Encode.int 0 )
-                            ]
+                    , pointerdownEvent App.LeftMouseButton { column = -0.5, row = -0.5 }
+                    , pointermoveEvent App.LeftMouseButton { column = 1.5, row = -0.5 }
+                    , pointerupEvent App.NoMouseButton { column = 1.5, row = -0.5 }
                     ]
                 |> it "draws walls between the points"
                     (Observer.observeModel (\model -> model.mazes.active.walls)
@@ -199,18 +175,8 @@ loadingScreenSpec =
 
                     --- TODO: Deduplicate the above
                     , Markup.target << by [ class "activeMaze" ]
-                    , Event.trigger "pointerdown" <|
-                        Json.Encode.object
-                            [ ( "pageX", Json.Encode.float tileCoordinateGlobal.x )
-                            , ( "pageY", Json.Encode.float tileCoordinateGlobal.y )
-                            , ( "buttons", Json.Encode.int 1 )
-                            ]
-                    , Event.trigger "pointerup" <|
-                        Json.Encode.object
-                            [ ( "pageX", Json.Encode.float tileCoordinateGlobal.x )
-                            , ( "pageY", Json.Encode.float tileCoordinateGlobal.y )
-                            , ( "buttons", Json.Encode.int 0 )
-                            ]
+                    , pointerdownEvent App.LeftMouseButton tilePosition
+                    , pointerupEvent App.NoMouseButton tilePosition
                     , Markup.target << by [ class "doneButton" ]
                     , Event.click
                     , Spec.Command.send (Process.sleep 0 |> Task.perform (\_ -> App.Tick 4000))
@@ -229,6 +195,48 @@ loadingScreenSpec =
         ]
 
 
+pointerdownEvent : App.MouseButton -> App.Position -> Spec.Step.Step model msg
+pointerdownEvent =
+    pointerEvent "pointerdown"
+
+
+pointerupEvent : App.MouseButton -> App.Position -> Spec.Step.Step model msg
+pointerupEvent =
+    pointerEvent "pointerup"
+
+
+pointermoveEvent : App.MouseButton -> App.Position -> Spec.Step.Step model msg
+pointermoveEvent =
+    pointerEvent "pointermove"
+
+
+pointerEvent : String -> App.MouseButton -> App.Position -> Spec.Step.Step model msg
+pointerEvent eventName mouseButton position =
+    Event.trigger eventName <|
+        Json.Encode.object
+            [ ( "pageX", Json.Encode.float (columnToGlobalX position.column) )
+            , ( "pageY", Json.Encode.float (rowToGlobalY position.row) )
+            , ( "buttons", Json.Encode.int (mouseButtonNameToInt mouseButton) )
+            ]
+
+
+mouseButtonNameToInt : App.MouseButton -> Int
+mouseButtonNameToInt mouseButton =
+    case mouseButton of
+        App.LeftMouseButton ->
+            1
+
+        App.RightMouseButton ->
+            2
+
+        App.MiddleMouseButton ->
+            3
+
+        App.NoMouseButton ->
+            0
+
+
+main : Program Flags (Model App.Model App.Msg) (Msg App.Msg)
 main =
     Runner.browserProgram
         [ loadingScreenSpec
