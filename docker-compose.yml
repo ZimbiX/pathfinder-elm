@@ -37,5 +37,24 @@ services:
     ports:
       - 5000:80
 
+  dev:
+    depends_on:
+      - backend
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    entrypoint: scripts/entrypoint
+    volumes:
+      - .:/work
+      - elm-stuff-cache:/work/elm-stuff
+      - node-modules-cache:/work/node_modules
+      - root-cache-cache:/root/.cache
+    working_dir: /work
+    ports:
+      - 8000:8000
+
 volumes:
   db-data: ~
+  elm-stuff-cache: ~
+  node-modules-cache: ~
+  root-cache-cache: ~

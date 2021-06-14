@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -Eeuo pipefail
+
+cd "$(dirname "$0")/.."
+
+dc_args=""
+
+if [[ "${1-}" == "--service-ports" ]]; then
+  dc_args+=" $1"
+  shift
+fi
+
+# Delete containers and DB volume afterwards on CI
+if [[ "${CI-false}" == "true" ]]; then
+  docker-compose build dev
+  trap '{
+    echo "Stopping containers..."
+    docker-compose down
+    docker volume rm -f pathfinder-elm_db-data
+  }' EXIT
+fi
+
+service="${SERVICE:-dev}"
+
+set -x
+docker-compose run --rm $dc_args "$service" "${@-bash}"

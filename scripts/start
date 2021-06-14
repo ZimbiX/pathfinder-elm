@@ -6,4 +6,4 @@ cd "$(dirname "$0")/.."
 
 export PATH=node_modules/.bin:$PATH
 
-elm-live src/Main.elm --start-page=src/index.html -- --output=elm.js
+elm-live src/Main.elm --start-page=src/index.html "$@" -- --output=elm.js
