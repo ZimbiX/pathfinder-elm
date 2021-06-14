@@ -49,6 +49,7 @@ services:
       - elm-stuff-cache:/work/elm-stuff
       - node-modules-cache:/work/node_modules
       - root-cache-cache:/root/.cache
+      - root-elm-cache:/root/.elm
     working_dir: /work
     ports:
       - 8000:8000
@@ -58,3 +59,4 @@ volumes:
   elm-stuff-cache: ~
   node-modules-cache: ~
   root-cache-cache: ~
+  root-elm-cache: ~

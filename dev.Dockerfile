@@ -3,6 +3,7 @@ FROM alpine
 RUN apk add --update \
   bash \
   curl \
+  jq \
   npm
 
 RUN npm install npm@latest -g

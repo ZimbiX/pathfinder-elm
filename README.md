@@ -19,6 +19,9 @@
     - [Build](#build)
         - [With Docker](#with-docker-2)
         - [Without Docker](#without-docker-2)
+    - [Test](#test)
+        - [With Docker](#with-docker-3)
+        - [Without Docker](#without-docker-3)
     - [Todo](#todo)
 
 <!-- /MarkdownTOC -->
@@ -107,6 +110,22 @@ $ ./auto/build
 
 ```bash
 $ ./scripts/build
+```
+
+### Test
+
+To runs the tests:
+
+#### With Docker
+
+```bash
+$ ./auto/test
+```
+
+#### Without Docker
+
+```bash
+$ ./scripts/test
 ```
 
 ### Todo
