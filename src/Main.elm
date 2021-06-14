@@ -825,7 +825,10 @@ requestNewEvents gameId afterVersion waitForEvents =
                     ""
 
                 DoWaitForEvents ->
-                    "&wait"
+                    -- Sadly, it seems DreamHost only allow a couple of simultaneous connections per IP address before subsequent requests hang.
+                    -- So disable long-polling for predictable responsiveness.
+                    --"&wait"
+                    ""
     in
     Http.get
         { url = settings.backendUrl ++ "?id=" ++ gameId ++ "&after=" ++ String.fromInt afterVersion ++ wait
