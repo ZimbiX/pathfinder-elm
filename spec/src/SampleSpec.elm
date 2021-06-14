@@ -66,11 +66,28 @@ loadingScreenSpec =
                     , Markup.target << by [ id "popupDismissButton" ]
                     , Event.click
                     ]
-                |> it "records the name"
-                    (Observer.observeModel (\model -> model.mazes.active.creatorName)
-                        |> expect
-                            (Claim.isEqual Debug.toString (App.ProvidedCreatorName "Fred"))
-                    )
+                |> observeThat
+                    [ it "records the name"
+                        (Observer.observeModel (\model -> model.mazes.active.creatorName)
+                            |> expect (Claim.isEqual Debug.toString (App.ProvidedCreatorName "Fred"))
+                        )
+                    , it "instructs to draw the level"
+                        (Markup.observeElement
+                            |> Markup.query
+                            << by [ class "viewInstructions" ]
+                            |> expect
+                                (Claim.isSomethingWhere <|
+                                    Markup.text <|
+                                        Claim.isStringContaining 1 "Fred can now draw the level that Player 2 will later play"
+                                )
+                        )
+                    , it "closes the popup"
+                        (Markup.observeElement
+                            |> Markup.query
+                            << by [ class "viewPopup_none" ]
+                            |> expect Claim.isSomething
+                        )
+                    ]
             )
         ]
 
