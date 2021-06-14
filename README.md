@@ -12,6 +12,7 @@
     - [Dependencies](#dependencies)
         - [With Docker](#with-docker)
         - [Without Docker](#without-docker)
+    - [Prepare database](#prepare-database)
     - [Run](#run)
         - [With Docker](#with-docker-1)
         - [Without Docker](#without-docker-1)
@@ -68,6 +69,12 @@ To install development dependencies (only supports Arch Linux, currently):
 
 ```bash
 $ ./scripts/setup
+```
+
+### Prepare database
+
+```bash
+$ ./auto/dev curl -sSN 'backend/backend/db-setup.php?reset&password=pathfinder_elm'
 ```
 
 ### Run
