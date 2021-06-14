@@ -10,8 +10,14 @@
 - [History](#history)
 - [Development](#development)
     - [Dependencies](#dependencies)
+        - [With Docker](#with-docker)
+        - [Without Docker](#without-docker)
     - [Run](#run)
+        - [With Docker](#with-docker-1)
+        - [Without Docker](#without-docker-1)
     - [Build](#build)
+        - [With Docker](#with-docker-2)
+        - [Without Docker](#without-docker-2)
     - [Todo](#todo)
 
 <!-- /MarkdownTOC -->
@@ -49,6 +55,15 @@ Versions:
 
 ### Dependencies
 
+#### With Docker
+
+Install:
+
+- Docker
+- Docker Compose
+
+#### Without Docker
+
 To install development dependencies (only supports Arch Linux, currently):
 
 ```bash
@@ -59,6 +74,14 @@ $ ./scripts/setup
 
 To run the app with live reload on code changes:
 
+#### With Docker
+
+```bash
+$ ./auto/start
+```
+
+#### Without Docker
+
 ```bash
 $ ./scripts/start
 ```
@@ -66,6 +89,14 @@ $ ./scripts/start
 ### Build
 
 To build the app to the `dist` folder:
+
+#### With Docker
+
+```bash
+$ ./auto/build
+```
+
+#### Without Docker
 
 ```bash
 $ ./scripts/build
