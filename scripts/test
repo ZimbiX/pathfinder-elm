@@ -7,14 +7,8 @@ cd "$(dirname "$0")/.."
 export PATH=node_modules/.bin:$PATH
 
 printf "Generating elm.json... "
-
-ruby -r json -e '
-  elm = JSON.load_file("elm.json")
-  elm["source-directories"] << "../src"
-  elm["dependencies"]["direct"]["brian-watkins/elm-spec"] = "3.1.0"
-  puts JSON.pretty_generate(elm, indent: " " * 4) + "\n"
-  warn "done"
-' > spec/elm.json
+jq '.["source-directories"] += ["../src"] | .dependencies.direct["brian-watkins/elm-spec"] = "3.1.0"' --indent 4 < elm.json > spec/elm.json
+echo "done"
 
 set -x
 
