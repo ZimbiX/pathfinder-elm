@@ -2,6 +2,7 @@
 /dist/
 /elm-stuff/
 /node_modules/
+/spec/app-src/
 /spec/elm-stuff/
 /spec/elm.json
 /tmp/

@@ -6,8 +6,19 @@ cd "$(dirname "$0")/.."
 
 export PATH=node_modules/.bin:$PATH
 
+rm -rf spec/app-src
+if [[ "${1-}" == "--debug" ]]; then
+  src=../src
+else
+  printf "Copying source code... "
+  mkdir -p spec/app-src
+  sed -E 's/Debug.log/stubDebug/g' < src/Main.elm > spec/app-src/Main.elm
+  echo "done"
+  src=app-src
+fi
+
 printf "Generating elm.json... "
-jq '.["source-directories"] += ["../src"] | .dependencies.direct["brian-watkins/elm-spec"] = "3.1.0"' --indent 4 < elm.json > spec/elm.json
+jq '.["source-directories"] += ["'"$src"'"] | .dependencies.direct["brian-watkins/elm-spec"] = "3.1.0"' --indent 4 < elm.json > spec/elm.json
 echo "done"
 
 set -x
