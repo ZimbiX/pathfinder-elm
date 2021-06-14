@@ -31,9 +31,9 @@ services:
       context: .
       dockerfile: backend.Dockerfile
     volumes:
-      - .:/var/www/html
-      - ./backend/config-dev.json:/var/www/html/backend/config.json
-    working_dir: /var/www/html
+      - .:/work
+      - ./backend/config-dev.json:/work/backend/config.json
+    working_dir: /work
     ports:
       - 5000:80
 
