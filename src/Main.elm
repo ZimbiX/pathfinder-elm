@@ -2786,7 +2786,7 @@ viewMazesWithRotation model =
                 [ Css.position Css.absolute
                 , Css.width (Css.pct 100)
                 , Css.height (Css.pct 100)
-                , Css.property "-moz-backface-visibility" "hidden"
+                , Css.property "backface-visibility" "hidden"
                 , Css.transforms [ Css.rotateY (Css.deg 0) ]
                 ]
             ]
@@ -2797,7 +2797,7 @@ viewMazesWithRotation model =
                 [ Css.position Css.absolute
                 , Css.width (Css.pct 100)
                 , Css.height (Css.pct 100)
-                , Css.property "-moz-backface-visibility" "hidden"
+                , Css.property "backface-visibility" "hidden"
                 , Css.transforms [ Css.rotateY (Css.deg 180) ]
                 ]
             ]
