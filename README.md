@@ -132,7 +132,7 @@ $ ./scripts/test
 
 ### Todo
 
-- Unit tests
+- Unit tests - higher-level tests were blocked by being [unable to instantiate a model containing a `Browser.Navigation.Key`](https://github.com/elm-explorations/test/issues/24), but I found I can instead use elm-spec
 - Allow two players to draw their maze simultaneously on each device
 - Handle retryable failure when submitting an event - not HTTP 409 Conflict
 - Fix bug where name prompt is shown again after submitting blank then right-clicking
@@ -165,3 +165,4 @@ $ ./scripts/test
 - Deduplicate path travelled
 - Different background colour for each maze within a game
 - Compensate for overshooting the point of collision in `returnToOriginIfPathUnclear`
+- Preload images
