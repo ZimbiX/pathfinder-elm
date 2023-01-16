@@ -44,6 +44,8 @@ I'm using this an opportunity to learn Functional Programming! :D Elm seems like
 
 My hope is for this modern rewrite to eventually be able to run on smartphones as an installable app.
 
+As much as I dislike PHP, I used that to write the backend, since I only needed something simple and it would allow it to be cloud-hosted for free (on my legacy DreamHost server I already have).
+
 ## History
 
 This is my fourth attempt at writing an implementation of the board game, PathFinder. See my original version on my old website for more info on the game: http://www.zimbico.net/games/pathfinder/
