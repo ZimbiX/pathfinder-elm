@@ -166,3 +166,4 @@ $ ./scripts/test
 - Different background colour for each maze within a game
 - Compensate for overshooting the point of collision in `returnToOriginIfPathUnclear`
 - Preload images
+- Fix bug where the game freezes when 'New game' is clicked while replaying events
