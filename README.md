@@ -4,6 +4,7 @@
 
 <!-- MarkdownTOC autolink=true -->
 
+- [Gameplay](#gameplay)
 - [Play](#play)
 - [Screenshots](#screenshots)
 - [Elm](#elm)
@@ -26,13 +27,21 @@
 
 <!-- /MarkdownTOC -->
 
+## Gameplay
+
+PathFinder is a multiplayer maze game playable in your web browser, based on a 1974 board game of the same name. Two players secretly draw a maze for each other on a grid, placing the starting point and at least one goal (a pot of gold). Once ready, all the walls turn invisible. The players then take turns making their way towards a gold. When a wall is hit, that wall becomes visible, and it switches turn. First to a gold wins! 🏆️
+
+It's a simple game, and it's great fun trying to anticipate what your friends will do and trying to outsmart them! 🧠 How good of a maze creator are they? Will they start by heading directly towards the gold? Will they try every possibility on the way, or move ahead blindly? Will they fall for the trap of this dead end? Should you try reverse-psychology, or perhaps reverse-reverse-psychology? Where on the board are even the edges of a size-bounded maze? Good luck! 🚀
+
+Tip: given it takes some time to draw a maze, for a shorter game, agree on a size for the dimensions of your mazes. Draw a box of that size, then make the maze within. 6x6 is a good starting point, and I play that often.
+
 ## Play
 
-The game supports both same-device multiplayer and multi-device multiplayer; the latter is pretty basic so far though, so don't move your opponent when it's their turn! ;)
+The game supports both same-device multiplayer and multi-device multiplayer; the latter is pretty basic so far though, so don't move your opponent when it's their turn! 😉
 
-You can play the game at:
+You can play the game here:
 
-https://pathfinder-elm.netlify.app/
+➡️➡️➡️ **https://pathfinder-elm.netlify.app** ⬅️⬅️⬅️
 
 ## Screenshots
 
@@ -40,22 +49,22 @@ https://pathfinder-elm.netlify.app/
 
 ## Elm
 
-I'm using this an opportunity to learn Functional Programming! :D Elm seems like a good choice, and I'm finding the [Elm Guide](https://guide.elm-lang.org/) very approachable.
+I'm using this an opportunity to learn a pure Functional Programming language! 😁 Elm seems like a great choice for its ease of use, and I'm finding the [Elm Guide](https://guide.elm-lang.org/) very approachable ❤️
 
-My hope is for this modern rewrite to eventually be able to run on smartphones as an installable app.
+My hope is for this modern rewrite to eventually be able to run on smartphones as an installable app 📱
 
-As much as I dislike PHP, I used that to write the backend, since I only needed something simple and it would allow it to be cloud-hosted for free (on my legacy DreamHost server I already have).
+As much as I dislike PHP, I used that to write the backend, since I only needed something simple and it would allow it to be cloud-hosted for free (on my legacy DreamHost server I already have) 💸
 
 ## History
 
-This is my fourth attempt at writing an implementation of the board game, PathFinder. See my original version on my old website for more info on the game: http://www.zimbico.net/games/pathfinder/
+This is my fourth attempt at writing an implementation of the game.
 
 Versions:
 
-- GameMaker (the most complete)
-- GameMaker Studio (Android spike)
-- Pascal using SwinGame - for a uni project
-- This one!
+- [GameMaker (the most complete)](http://www.zimbico.net/games/pathfinder/) -- 2008-2011
+- Pascal using SwinGame - for a uni project -- 2012
+- GameMaker Studio (Android spike) -- 2013
+- This one! -- 2020-
 
 ## Development
 
