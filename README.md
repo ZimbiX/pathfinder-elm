@@ -4,6 +4,8 @@
 
 ## Contents
 
+<details>
+ <summary>Click to open table of contents</summary>
 <!-- MarkdownTOC autolink=true -->
 
 - [Gameplay](#gameplay)
@@ -25,9 +27,10 @@
     - [Test](#test)
         - [With Docker](#with-docker-3)
         - [Without Docker](#without-docker-3)
-    - [Todo](#todo)
+- [Todo](#todo)
 
 <!-- /MarkdownTOC -->
+</details>
 
 ## Gameplay
 
@@ -141,7 +144,7 @@ $ ./auto/test
 $ ./scripts/test
 ```
 
-### Todo
+## Todo
 
 - Unit tests - higher-level tests were blocked by being [unable to instantiate a model containing a `Browser.Navigation.Key`](https://github.com/elm-explorations/test/issues/24), but I found I can instead use elm-spec
 - Allow two players to draw their maze simultaneously on each device
