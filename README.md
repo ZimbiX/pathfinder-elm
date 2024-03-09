@@ -58,7 +58,7 @@ I'm using this an opportunity to learn a pure Functional Programming language! �
 
 My hope is for this modern rewrite to eventually be able to run on smartphones as an installable app 📱
 
-As much as I dislike PHP, I used that to write the backend, since I only needed something simple and it would allow it to be cloud-hosted for free (on my legacy DreamHost server I already have) 💸
+As much as I dislike PHP, I chose to use that to write the backend, since I only needed something simple and it would allow it to be cloud-hosted for free (on my legacy DreamHost server I already have) 💸
 
 ## History
 
