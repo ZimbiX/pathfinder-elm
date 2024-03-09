@@ -2,6 +2,8 @@
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/d41588f4-5506-43c7-8257-ed537a62f16c/deploy-status)](https://app.netlify.com/sites/pathfinder-elm/deploys)
 
+## Contents
+
 <!-- MarkdownTOC autolink=true -->
 
 - [Gameplay](#gameplay)
